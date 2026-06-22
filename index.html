@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>document.documentElement.classList.add('js');</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Elite Host Services · Premium Corporate Housing in the GTA</title>
+<meta name="description" content="Elite Host Services provides premium corporate housing solutions across the Greater Toronto Area. Fully furnished, professionally managed residences for executives, project teams, and relocating employees.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+picture{display:contents;}
+:root{
+  --ink:#0a0e1a;--ink2:#13192a;--ink3:#1f2638;
+  --bronze:#a08560;--bronze2:#c4a47a;--bronze3:#dcc596;
+  --cream:#faf7f2;--cream2:#f0ebe1;--stone:#e8e2d6;--line:#d8d2c5;
+  --body:#2a2e3a;--muted:#6b6f7a;--soft:#9ca0ab;
+}
+html{scroll-behavior:smooth;font-size:16px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+body{font-family:"Inter","Helvetica Neue",sans-serif;background:var(--cream);color:var(--body);overflow-x:hidden;font-weight:400;line-height:1.6;}
+img{max-width:100%;display:block;}
+a{color:inherit;text-decoration:none;}
+
+nav{position:fixed;top:0;left:0;right:0;z-index:500;background:rgba(10,14,26,0.85);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);display:flex;align-items:center;justify-content:space-between;padding:0 56px;height:72px;border-bottom:1px solid rgba(220,197,150,0.12);transition:all 0.4s cubic-bezier(.2,.8,.2,1);}
+.nav-logo{display:flex;align-items:center;gap:14px;cursor:pointer;}
+.nav-logo svg{width:30px;height:30px;}
+.nav-brand{font-family:"Cormorant Garamond",serif;font-size:18px;font-weight:500;letter-spacing:2px;color:#fff;line-height:1;}
+.nav-brand span{display:block;font-family:"Inter",sans-serif;font-size:8px;font-weight:500;letter-spacing:4.5px;color:var(--bronze2);margin-top:6px;text-transform:uppercase;}
+.nav-links{display:flex;align-items:center;gap:38px;}
+.nav-link{font-family:"Inter",sans-serif;font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.7);cursor:pointer;font-weight:500;text-transform:uppercase;background:none;border:none;transition:color 0.25s;}
+.nav-link:hover{color:var(--bronze3);}
+.nav-cta{display:flex;align-items:center;gap:10px;font-size:11px;letter-spacing:2px;font-weight:500;color:var(--bronze3);text-decoration:none;border:1px solid rgba(220,197,150,0.4);padding:10px 22px;text-transform:uppercase;transition:all 0.3s;}
+.nav-cta:hover{background:var(--bronze);color:#fff;border-color:var(--bronze);}
+
+.hero{position:relative;min-height:100vh;background:#000;overflow:hidden;}
+.hero-image{position:absolute;inset:0;background-size:cover;background-position:center;transform:scale(1.05);animation:slowZoom 14s ease-out forwards;}
+@keyframes slowZoom{to{transform:scale(1);}}
+.hero-veil{position:absolute;inset:0;background:linear-gradient(135deg,rgba(10,14,26,0.7) 0%,rgba(10,14,26,0.45) 40%,rgba(10,14,26,0.85) 100%);}
+.hero-content{position:absolute;bottom:0;left:0;right:0;padding:0 80px 100px;z-index:2;}
+.hero-meta{display:flex;align-items:center;gap:14px;margin-bottom:36px;animation:fadeUp 0.9s 0.3s both;}
+.hero-meta-line{width:48px;height:1px;background:var(--bronze3);}
+.hero-meta-text{font-size:10px;letter-spacing:5px;color:var(--bronze3);font-weight:500;text-transform:uppercase;}
+.hero-title{font-family:"Cormorant Garamond",serif;font-size:clamp(56px,7.5vw,124px);font-weight:300;color:#fff;line-height:0.98;letter-spacing:-0.02em;margin-bottom:32px;max-width:1200px;animation:fadeUp 0.9s 0.45s both;}
+.hero-title .accent{font-style:italic;color:var(--bronze3);font-weight:300;}
+.hero-sub{font-size:14px;color:rgba(255,255,255,0.75);letter-spacing:0.5px;line-height:1.75;max-width:600px;margin-bottom:56px;animation:fadeUp 0.9s 0.6s both;font-weight:300;}
+.hero-actions{display:flex;gap:16px;flex-wrap:wrap;animation:fadeUp 0.9s 0.75s both;}
+.btn-hero-primary{display:inline-flex;align-items:center;gap:14px;background:var(--cream);color:var(--ink);font-size:11px;letter-spacing:2.5px;font-weight:600;padding:20px 40px;text-transform:uppercase;transition:all 0.3s;border:none;cursor:pointer;font-family:"Inter",sans-serif;}
+.btn-hero-primary:hover{background:var(--bronze3);}
+.btn-hero-primary svg{width:14px;height:14px;}
+.btn-hero-secondary{display:inline-flex;align-items:center;gap:14px;background:transparent;color:#fff;font-size:11px;letter-spacing:2.5px;font-weight:500;padding:20px 40px;border:1px solid rgba(255,255,255,0.3);text-transform:uppercase;transition:all 0.3s;font-family:"Inter",sans-serif;cursor:pointer;}
+.btn-hero-secondary:hover{border-color:var(--bronze3);color:var(--bronze3);}
+.scroll-indicator{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);z-index:3;display:flex;flex-direction:column;align-items:center;gap:10px;animation:bobble 2.5s ease-in-out infinite;}
+@keyframes bobble{0%,100%{transform:translate(-50%,0);}50%{transform:translate(-50%,8px);}}
+.scroll-indicator .label{font-size:9px;letter-spacing:4px;color:rgba(255,255,255,0.4);text-transform:uppercase;font-weight:500;}
+.scroll-indicator .line{width:1px;height:48px;background:linear-gradient(to bottom,rgba(220,197,150,0.6),transparent);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:translateY(0);}}
+
+.announce{background:var(--ink);color:#fff;padding:32px 80px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0;border-bottom:1px solid rgba(220,197,150,0.12);}
+.announce-item{text-align:center;padding:8px 24px;border-right:1px solid rgba(220,197,150,0.12);}
+.announce-item:last-child{border-right:none;}
+.announce-num{font-family:"Cormorant Garamond",serif;font-size:36px;font-weight:300;color:var(--bronze3);line-height:1;margin-bottom:8px;letter-spacing:-0.01em;}
+.announce-label{font-size:10px;letter-spacing:3px;color:rgba(255,255,255,0.55);text-transform:uppercase;font-weight:500;}
+
+section{padding:140px 80px;position:relative;}
+.section-inner{max-width:1280px;margin:0 auto;}
+.eyebrow{display:inline-flex;align-items:center;gap:14px;font-size:10px;letter-spacing:5px;color:var(--bronze);font-weight:500;margin-bottom:24px;text-transform:uppercase;}
+.eyebrow::before{content:'';width:32px;height:1px;background:var(--bronze);}
+.eyebrow.center{justify-content:center;}
+.eyebrow.center::before{display:none;}
+.eyebrow.center::after{content:'';width:32px;height:1px;background:var(--bronze);}
+.h-display{font-family:"Cormorant Garamond",serif;font-size:clamp(36px,4.5vw,68px);font-weight:300;color:var(--ink);line-height:1.05;letter-spacing:-0.015em;}
+.h-display .accent{font-style:italic;color:var(--bronze);font-weight:300;}
+.text-center{text-align:center;}
+
+.introduction{background:var(--cream);padding:160px 80px;}
+.intro-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:120px;align-items:center;}
+.intro-image{position:relative;height:640px;overflow:hidden;}
+.intro-image img{width:100%;height:100%;object-fit:cover;}
+.intro-image::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(10,14,26,0.15),transparent);pointer-events:none;}
+.intro-image-tag{position:absolute;bottom:32px;left:32px;right:32px;display:flex;align-items:center;gap:14px;color:#fff;font-size:11px;letter-spacing:2px;text-transform:uppercase;font-weight:500;}
+.intro-image-tag::before{content:'';width:32px;height:1px;background:var(--bronze3);}
+.intro-content .h-display{margin-bottom:32px;}
+.intro-divider{width:60px;height:2px;background:var(--bronze);margin-bottom:36px;}
+.intro-content p{font-family:"Cormorant Garamond",serif;font-size:21px;line-height:1.7;color:var(--body);font-weight:400;margin-bottom:24px;}
+.intro-content p:last-child{margin-bottom:0;}
+.intro-content p.lead{font-size:24px;color:var(--ink);line-height:1.55;}
+
+.residences{background:var(--ink);color:#fff;padding:160px 80px;position:relative;overflow:hidden;}
+.residences::before{content:'';position:absolute;top:-200px;right:-200px;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(196,164,122,0.08),transparent 70%);}
+.residences .eyebrow{color:var(--bronze3);}
+.residences .eyebrow::before{background:var(--bronze3);}
+.residences .h-display{color:#fff;}
+.residences .h-display .accent{color:var(--bronze3);}
+.residences-header{display:grid;grid-template-columns:1fr 1.5fr;gap:120px;margin-bottom:100px;align-items:end;}
+.residences-intro-text{font-family:"Cormorant Garamond",serif;font-size:20px;line-height:1.6;color:rgba(255,255,255,0.7);font-weight:300;}
+.residences-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;}
+.r-card{background:transparent;cursor:pointer;transition:transform 0.5s cubic-bezier(.2,.8,.2,1);text-decoration:none;color:#fff;display:block;}
+.r-card:hover{transform:translateY(-6px);}
+.r-image{position:relative;height:480px;overflow:hidden;margin-bottom:28px;}
+.r-image img{width:100%;height:100%;object-fit:cover;transition:transform 1.4s cubic-bezier(.2,.8,.2,1);}
+.r-card:hover .r-image img{transform:scale(1.06);}
+.r-image::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(10,14,26,0.6),transparent 50%);}
+.r-image-meta{position:absolute;top:24px;left:24px;background:rgba(255,255,255,0.1);backdrop-filter:blur(20px);border:1px solid rgba(220,197,150,0.3);padding:7px 14px;font-size:9px;letter-spacing:2.5px;color:var(--bronze3);font-weight:600;text-transform:uppercase;z-index:1;}
+.r-image-rating{position:absolute;top:24px;right:24px;display:flex;align-items:center;gap:8px;background:rgba(10,14,26,0.7);backdrop-filter:blur(20px);padding:7px 14px;z-index:1;}
+.r-image-rating .stars{color:var(--bronze3);font-size:9px;letter-spacing:2px;}
+.r-image-rating .score{font-family:"Cormorant Garamond",serif;font-size:14px;color:#fff;font-weight:500;}
+.r-image-locale{position:absolute;bottom:24px;left:24px;font-size:10px;letter-spacing:2.5px;color:#fff;font-weight:500;text-transform:uppercase;z-index:1;}
+.r-content{padding:0 4px;}
+.r-name{font-family:"Cormorant Garamond",serif;font-size:30px;font-weight:400;color:#fff;line-height:1.15;margin-bottom:14px;letter-spacing:-0.005em;}
+.r-desc{font-size:13.5px;line-height:1.75;color:rgba(255,255,255,0.6);margin-bottom:24px;font-weight:400;}
+.r-stats{display:flex;gap:0;border-top:1px solid rgba(220,197,150,0.18);padding-top:20px;}
+.r-stat{flex:1;text-align:center;border-right:1px solid rgba(220,197,150,0.18);padding:0 8px;}
+.r-stat:last-child{border-right:none;}
+.r-stat .v{font-family:"Cormorant Garamond",serif;font-size:22px;color:#fff;font-weight:500;line-height:1;}
+.r-stat .l{font-size:9px;letter-spacing:1.5px;color:rgba(255,255,255,0.5);text-transform:uppercase;margin-top:6px;font-weight:500;}
+.r-cta{display:flex;align-items:center;justify-content:space-between;padding-top:20px;margin-top:20px;border-top:1px solid rgba(220,197,150,0.18);}
+.r-cta-text{font-size:10px;letter-spacing:2.5px;color:var(--bronze3);font-weight:600;text-transform:uppercase;}
+.r-cta-arrow{color:var(--bronze3);font-size:18px;transition:transform 0.3s;}
+.r-card:hover .r-cta-arrow{transform:translateX(6px);}
+
+.philosophy{background:var(--cream);padding:200px 80px;text-align:center;position:relative;overflow:hidden;}
+.philosophy::before{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:900px;height:900px;border-radius:50%;border:1px solid rgba(160,133,96,0.06);pointer-events:none;}
+.philosophy::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:600px;height:600px;border-radius:50%;border:1px solid rgba(160,133,96,0.1);pointer-events:none;}
+.philosophy-quote{font-family:"Cormorant Garamond",serif;font-size:clamp(28px,3.5vw,52px);font-weight:300;color:var(--ink);line-height:1.3;letter-spacing:-0.01em;max-width:1000px;margin:0 auto;font-style:italic;}
+.philosophy-quote .quote-mark{color:var(--bronze);font-size:1.2em;display:block;margin-bottom:16px;line-height:1;}
+.philosophy-author{margin-top:48px;padding-top:32px;display:inline-flex;flex-direction:column;align-items:center;gap:8px;}
+.philosophy-author-line{width:40px;height:1px;background:var(--bronze);}
+.philosophy-author-text{font-size:11px;letter-spacing:3.5px;color:var(--muted);text-transform:uppercase;font-weight:500;margin-top:14px;}
+
+.services{background:var(--ink2);color:#fff;padding:160px 80px;}
+.services .eyebrow{color:var(--bronze3);}
+.services .eyebrow::before{background:var(--bronze3);}
+.services .h-display{color:#fff;}
+.services .h-display .accent{color:var(--bronze3);}
+.services-header{display:grid;grid-template-columns:1fr 1.5fr;gap:120px;margin-bottom:100px;align-items:end;}
+.services-intro-text{font-family:"Cormorant Garamond",serif;font-size:20px;line-height:1.6;color:rgba(255,255,255,0.7);font-weight:300;}
+.svc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(220,197,150,0.15);}
+.svc-item{background:var(--ink2);padding:48px 40px;transition:background 0.4s;}
+.svc-item:hover{background:var(--ink3);}
+.svc-num{font-family:"Cormorant Garamond",serif;font-size:13px;color:var(--bronze3);font-weight:400;letter-spacing:2px;margin-bottom:24px;}
+.svc-title{font-family:"Cormorant Garamond",serif;font-size:24px;font-weight:400;color:#fff;margin-bottom:14px;line-height:1.2;}
+.svc-desc{font-size:13px;line-height:1.75;color:rgba(255,255,255,0.6);font-weight:400;}
+
+.process{background:var(--cream);padding:160px 80px;}
+.process-header{text-align:center;margin-bottom:100px;max-width:780px;margin-left:auto;margin-right:auto;}
+.process-header .h-display{margin-bottom:24px;}
+.process-header-sub{font-family:"Cormorant Garamond",serif;font-size:20px;line-height:1.6;color:var(--muted);font-weight:400;}
+.process-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);}
+.process-step{background:var(--cream);padding:60px 48px;text-align:left;transition:background 0.3s;position:relative;}
+.process-step:hover{background:#fff;}
+.process-num{font-family:"Cormorant Garamond",serif;font-size:80px;font-weight:300;color:var(--bronze);line-height:0.9;margin-bottom:32px;letter-spacing:-0.02em;}
+.process-num .dot{color:var(--bronze3);}
+.process-step h3{font-family:"Cormorant Garamond",serif;font-size:24px;font-weight:400;color:var(--ink);margin-bottom:14px;line-height:1.2;}
+.process-step p{font-size:13px;line-height:1.8;color:var(--muted);font-weight:400;}
+
+.clientele{background:var(--cream2);padding:160px 80px;}
+.clientele-header{display:grid;grid-template-columns:1fr 1.5fr;gap:120px;margin-bottom:80px;align-items:end;}
+.clientele-intro-text{font-family:"Cormorant Garamond",serif;font-size:20px;line-height:1.6;color:var(--muted);font-weight:400;}
+.clientele-list{display:flex;flex-direction:column;border-top:1px solid var(--line);}
+.cli-row{display:grid;grid-template-columns:80px 1fr 2fr 60px;gap:40px;padding:40px 24px;border-bottom:1px solid var(--line);align-items:center;transition:padding-left 0.3s,background 0.3s;cursor:default;}
+.cli-row:hover{padding-left:40px;background:rgba(160,133,96,0.04);}
+.cli-num{font-family:"Cormorant Garamond",serif;font-size:13px;color:var(--bronze);letter-spacing:2px;font-weight:400;}
+.cli-name{font-family:"Cormorant Garamond",serif;font-size:22px;color:var(--ink);font-weight:400;line-height:1.2;}
+.cli-desc{font-size:13px;line-height:1.7;color:var(--muted);font-weight:400;}
+.cli-arrow{text-align:right;color:var(--bronze);font-size:20px;opacity:0.4;transition:opacity 0.3s,transform 0.3s;}
+.cli-row:hover .cli-arrow{opacity:1;transform:translateX(6px);}
+
+.invitation{background:var(--ink);color:#fff;padding:200px 80px;text-align:center;position:relative;overflow:hidden;}
+.invitation::before{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:1000px;height:1000px;border-radius:50%;border:1px solid rgba(220,197,150,0.06);pointer-events:none;}
+.invitation::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:700px;height:700px;border-radius:50%;border:1px solid rgba(220,197,150,0.1);pointer-events:none;}
+.invitation .eyebrow{justify-content:center;color:var(--bronze3);}
+.invitation .eyebrow::before{display:none;}
+.invitation .eyebrow::after{content:'';width:32px;height:1px;background:var(--bronze3);}
+.invitation .h-display{color:#fff;max-width:880px;margin:0 auto 28px;}
+.invitation .h-display .accent{color:var(--bronze3);}
+.inv-sub{font-family:"Cormorant Garamond",serif;font-size:21px;color:rgba(255,255,255,0.65);max-width:580px;margin:0 auto 56px;line-height:1.6;font-weight:400;}
+.inv-actions{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;position:relative;z-index:1;}
+.btn-inv-primary{display:inline-flex;align-items:center;gap:14px;background:var(--bronze3);color:var(--ink);font-size:11px;letter-spacing:2.5px;font-weight:600;padding:20px 44px;text-decoration:none;text-transform:uppercase;transition:all 0.3s;border:none;cursor:pointer;font-family:"Inter",sans-serif;}
+.btn-inv-primary:hover{background:#fff;}
+.btn-inv-primary svg{width:14px;height:14px;}
+.btn-inv-secondary{display:inline-flex;align-items:center;gap:14px;background:transparent;color:#fff;font-size:11px;letter-spacing:2.5px;font-weight:500;padding:20px 44px;border:1px solid rgba(255,255,255,0.3);text-decoration:none;text-transform:uppercase;transition:all 0.3s;cursor:pointer;font-family:"Inter",sans-serif;}
+.btn-inv-secondary:hover{border-color:var(--bronze3);color:var(--bronze3);}
+.inv-contacts{margin-top:80px;padding-top:48px;border-top:1px solid rgba(220,197,150,0.15);display:flex;gap:80px;justify-content:center;flex-wrap:wrap;position:relative;z-index:1;}
+.inv-contact .label{font-size:9px;letter-spacing:3.5px;color:var(--bronze3);font-weight:500;margin-bottom:8px;text-transform:uppercase;}
+.inv-contact .val{font-family:"Cormorant Garamond",serif;font-size:22px;font-weight:400;color:#fff;}
+.inv-contact .val.email{font-size:16px;}
+
+footer{background:#06080f;padding:80px 80px 40px;border-top:1px solid rgba(220,197,150,0.15);}
+.footer-main{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:80px;margin-bottom:60px;}
+.footer-brand{display:flex;flex-direction:column;gap:20px;}
+.footer-logo{display:flex;align-items:center;gap:14px;}
+.footer-logo svg{width:30px;height:30px;}
+.footer-logo-text{font-family:"Cormorant Garamond",serif;font-size:18px;font-weight:500;letter-spacing:2px;color:#fff;line-height:1;}
+.footer-logo-text span{display:block;font-family:"Inter",sans-serif;font-size:8px;font-weight:500;letter-spacing:4.5px;color:var(--bronze3);margin-top:6px;text-transform:uppercase;}
+.footer-desc{font-size:13px;line-height:1.8;color:rgba(255,255,255,0.5);font-weight:400;max-width:340px;}
+.footer-col h4{font-size:9px;letter-spacing:3.5px;color:var(--bronze3);font-weight:600;text-transform:uppercase;margin-bottom:24px;padding-bottom:14px;border-bottom:1px solid rgba(220,197,150,0.15);}
+.footer-link{display:block;font-size:13px;color:rgba(255,255,255,0.55);cursor:pointer;padding:8px 0;transition:color 0.25s;font-family:"Cormorant Garamond",serif;font-weight:400;}
+.footer-link:hover{color:var(--bronze3);}
+.footer-contact-item{margin-bottom:18px;}
+.footer-contact-item .fc-label{font-size:8.5px;letter-spacing:2.5px;color:var(--bronze3);font-weight:600;text-transform:uppercase;}
+.footer-contact-item .fc-val{font-family:"Cormorant Garamond",serif;font-size:16px;color:rgba(255,255,255,0.85);margin-top:4px;}
+.footer-bottom{display:flex;align-items:center;justify-content:space-between;padding-top:40px;border-top:1px solid rgba(255,255,255,0.06);flex-wrap:wrap;gap:16px;}
+.footer-copy{font-size:10.5px;color:rgba(255,255,255,0.3);letter-spacing:0.5px;}
+.footer-tagline{font-size:10px;color:rgba(220,197,150,0.5);letter-spacing:3px;text-transform:uppercase;}
+
+/* Reveal content is visible by default. The fade-in is progressive enhancement, gated on .js, so blocked or failed JavaScript never blanks the page. */
+.reveal{opacity:1;transform:none;}
+.js .reveal{opacity:0;transform:translateY(32px);transition:opacity 0.9s cubic-bezier(.2,.8,.2,1),transform 0.9s cubic-bezier(.2,.8,.2,1);}
+.js .reveal.visible{opacity:1;transform:translateY(0);}
+.reveal-d1{transition-delay:0.1s;}.reveal-d2{transition-delay:0.2s;}.reveal-d3{transition-delay:0.3s;}.reveal-d4{transition-delay:0.4s;}
+@media (prefers-reduced-motion: reduce){
+  .js .reveal,.js .reveal.visible{opacity:1;transform:none;transition:none;}
+  *,*::before,*::after{animation-duration:0.001ms !important;animation-iteration-count:1 !important;transition-duration:0.001ms !important;scroll-behavior:auto !important;}
+}
+
+@media(max-width:1100px){
+  nav{padding:0 32px;}
+  .nav-links{display:none;}
+  section,.introduction,.residences,.philosophy,.services,.process,.clientele,.invitation{padding-left:32px;padding-right:32px;}
+  .hero-content{padding:0 40px 60px;}
+  .announce{padding:24px 32px;grid-template-columns:1fr 1fr;gap:0;}
+  .announce-item{padding:16px;border-bottom:1px solid rgba(220,197,150,0.1);}
+  .announce-item:nth-child(2){border-right:none;}
+  .announce-item:nth-child(3),.announce-item:nth-child(4){border-bottom:none;}
+  .announce-item:nth-child(2n){border-right:none;}
+  .intro-grid{grid-template-columns:1fr;gap:60px;}
+  .intro-image{height:480px;}
+  .residences-grid{grid-template-columns:1fr;gap:40px;}
+  .r-image{height:380px;}
+  .residences-header,.services-header,.clientele-header{grid-template-columns:1fr;gap:40px;}
+  .svc-grid,.process-grid{grid-template-columns:1fr;}
+  .cli-row{grid-template-columns:60px 1fr 40px;gap:24px;}
+  .cli-desc{display:none;}
+  .footer-main{grid-template-columns:1fr 1fr;gap:40px;}
+}
+@media(max-width:680px){
+  nav{padding:0 20px;height:64px;}
+  .nav-cta{display:none;}
+  section,.introduction,.residences,.philosophy,.services,.process,.clientele,.invitation{padding:80px 24px;}
+  .hero-content{padding:0 24px 40px;}
+  .hero-actions{flex-direction:column;align-items:stretch;}
+  .btn-hero-primary,.btn-hero-secondary{justify-content:center;}
+  .announce{grid-template-columns:1fr;}
+  .announce-item{border-right:none;}
+  .footer-main{grid-template-columns:1fr;gap:40px;}
+  .footer-bottom{flex-direction:column;text-align:center;}
+  .inv-contacts{flex-direction:column;gap:32px;}
+  .cli-row{grid-template-columns:1fr;gap:8px;text-align:left;padding:24px 0;}
+  .cli-arrow{display:none;}
+  .cli-num{font-size:11px;}
+}
+
+/* ── E4: FAQ ── */
+.faq{background:var(--cream);padding:160px 80px;}
+.faq-header{margin-bottom:64px;}
+.faq-list{max-width:820px;}
+.faq-item{border-bottom:1px solid var(--line);}
+.faq-item summary{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:28px 4px;cursor:pointer;list-style:none;font-family:"Cormorant Garamond",serif;font-size:23px;font-weight:500;color:var(--ink);}
+.faq-item summary::-webkit-details-marker{display:none;}
+.faq-item summary:hover{color:var(--bronze);}
+.faq-item summary:focus-visible{outline:2px solid var(--bronze);outline-offset:3px;}
+.faq-mark{font-family:"Inter",sans-serif;font-size:20px;font-weight:300;color:var(--bronze);transition:transform 0.25s;flex-shrink:0;}
+.faq-item[open] .faq-mark{transform:rotate(45deg);}
+.faq-body{padding:0 4px 30px;max-width:680px;}
+.faq-body p{font-size:16px;line-height:1.75;color:var(--body);}
+@media (prefers-reduced-motion: reduce){.faq-mark{transition:none;}}
+/* ── E4: founder + trust ── */
+.founder-note{margin-top:8px;}
+.trust-row{display:flex;flex-wrap:wrap;gap:12px 32px;margin-top:32px;padding-top:24px;border-top:1px solid var(--line);}
+.trust-item{font-family:"Inter",sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--bronze);font-weight:600;}
+/* ── E4: hero anchor + capture form ── */
+a.btn-hero-primary{text-decoration:none;display:inline-flex;align-items:center;gap:14px;}
+.inv-form{max-width:640px;margin:72px auto 0;padding-top:56px;border-top:1px solid rgba(220,197,150,0.15);text-align:left;position:relative;z-index:1;}
+.inv-hp{display:none;}
+.inv-form-title{font-family:"Cormorant Garamond",serif;font-size:24px;color:#fff;text-align:center;margin-bottom:32px;}
+.inv-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px 24px;margin-bottom:28px;}
+.inv-field{display:block;}
+.inv-field-wide{grid-column:1 / -1;}
+.inv-field span{display:block;font-family:"Inter",sans-serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(220,197,150,0.8);margin-bottom:8px;}
+.inv-field input{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(220,197,150,0.25);color:#fff;padding:14px 16px;font-family:"Inter",sans-serif;font-size:15px;}
+.inv-field input::placeholder{color:rgba(255,255,255,0.3);}
+.inv-field input:focus{outline:none;border-color:var(--bronze3);background:rgba(255,255,255,0.08);}
+.inv-form-submit{width:100%;justify-content:center;}
+.inv-form-status{margin-top:18px;text-align:center;font-family:"Inter",sans-serif;font-size:14px;color:var(--bronze3);min-height:20px;}
+@media (max-width:640px){.inv-form-grid{grid-template-columns:1fr;}.faq-item summary{font-size:19px;}}
+
+/* ── E5: comparison ── */
+.compare{background:var(--cream2);padding:160px 80px;}
+.compare-header{margin-bottom:56px;}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+.compare-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.compare-table{width:100%;min-width:680px;border-collapse:collapse;background:var(--cream);border:1px solid var(--line);}
+.compare-table th,.compare-table td{padding:20px 24px;text-align:left;border-bottom:1px solid var(--line);font-size:15px;color:var(--body);vertical-align:top;}
+.compare-table thead th{font-family:"Cormorant Garamond",serif;font-size:20px;font-weight:500;color:var(--ink);border-bottom:1px solid var(--bronze2);}
+.compare-table tbody th{font-family:"Inter",sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--bronze);font-weight:600;white-space:nowrap;}
+.cmp-count{color:var(--muted);font-size:13px;}
+.cmp-links td a{font-family:"Inter",sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--bronze);text-decoration:none;border-bottom:1px solid var(--bronze2);padding-bottom:3px;font-weight:600;}
+.cmp-links td a:hover{color:var(--ink);border-color:var(--ink);}
+.cmp-links td a:focus-visible{outline:2px solid var(--bronze);outline-offset:3px;}
+.compare-table tbody tr:last-child th,.compare-table tbody tr:last-child td{border-bottom:none;}
+@media (max-width:640px){.compare-table th,.compare-table td{padding:14px 16px;}}
+</style>
+<link rel="canonical" href="https://www.rfelitehostservices.ca/">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32x32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="favicon-16x16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Elite Host Services">
+<meta property="og:locale" content="en_CA">
+<meta property="og:title" content="Elite Host Services · Premium Corporate Housing in the GTA">
+<meta property="og:description" content="Elite Host Services provides premium corporate housing solutions across the Greater Toronto Area. Fully furnished, professionally managed residences for executives, project teams, and relocating employees.">
+<meta property="og:url" content="https://www.rfelitehostservices.ca/">
+<meta property="og:image" content="https://www.rfelitehostservices.ca/images/og-home.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Elite Host Services premium corporate residences in the Greater Toronto Area">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Elite Host Services · Premium Corporate Housing in the GTA">
+<meta name="twitter:description" content="Elite Host Services provides premium corporate housing solutions across the Greater Toronto Area. Fully furnished, professionally managed residences for executives, project teams, and relocating employees.">
+<meta name="twitter:image" content="https://www.rfelitehostservices.ca/images/og-home.jpg">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Elite Host Services",
+  "url": "https://www.rfelitehostservices.ca/",
+  "logo": "https://www.rfelitehostservices.ca/apple-touch-icon.png",
+  "image": "https://www.rfelitehostservices.ca/images/og-home.jpg",
+  "description": "Elite Host Services provides premium corporate housing solutions across the Greater Toronto Area. Fully furnished, professionally managed residences for executives, project teams, and relocating employees.",
+  "telephone": "+1 647 409 6027",
+  "email": "Richie.Furmah@gmail.com",
+  "address": {
+    "@type": "PostalAddress",
+    "addressLocality": "Brampton",
+    "addressRegion": "ON",
+    "addressCountry": "CA"
+  },
+  "areaServed": {
+    "@type": "Place",
+    "name": "Greater Toronto Area"
+  },
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "telephone": "+1 647 409 6027",
+    "email": "Richie.Furmah@gmail.com",
+    "contactType": "reservations",
+    "areaServed": "CA"
+  }
+}
+</script>
+<link rel="preload" as="image" href="images/3b339fe33761ed19.jpg" fetchpriority="high">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How do corporate contracts work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Most engagements run as six or twelve month corporate contracts that dedicate our residences to your organisation. During the term, your people stay across the homes as your needs require. Monthly arrangements are also available."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How much notice do you need before a stay?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "One week. Tell us who is arriving and when, and the residence is prepared, cleaned, and stocked before they walk in."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is included in the rate?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Everything a working stay needs: a fully furnished home, utilities, WiFi, parking, and in suite laundry. Additional services can be arranged around your requirements."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do invoicing and payment work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "We issue formal corporate invoices, with payment accepted by credit card, direct deposit, and other channels. Billing terms are set out in your contract."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is there a formal agreement?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Every engagement is covered by a written Corporate Stay Agreement tailored to your contract terms."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Who looks after our people during a stay?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "One owner level point of contact, available 24/7. You will always know who picks up the phone."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What does it cost?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Rates and terms are tailored to each engagement and depend on duration, residences, and services. Book a call and we will build a quote around your needs."
+      }
+    }
+  ]
+}
+</script>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo"><svg viewBox="0 0 32 32" fill="none"><rect x="2" y="20" width="5" height="10" fill="#a08560"/><rect x="9" y="15" width="5" height="15" fill="#a08560" opacity=".85"/><rect x="16" y="9" width="5" height="21" fill="#a08560" opacity=".9"/><rect x="23" y="3" width="5" height="27" fill="#a08560"/><polyline points="4.5,18 11.5,13 18.5,7 26,1" stroke="#dcc596" stroke-width="1.4" fill="none" stroke-linecap="round"/><polyline points="23,1 26,1 26,4" stroke="#dcc596" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg><div class="nav-brand">ELITE HOST<span>Services</span></div></a>
+  <div class="nav-links">
+    <button class="nav-link" onclick="document.querySelector('#about').scrollIntoView({behavior:'smooth'})">About</button>
+    <button class="nav-link" onclick="document.querySelector('#properties').scrollIntoView({behavior:'smooth'})">Properties</button>
+    <button class="nav-link" onclick="document.querySelector('#services').scrollIntoView({behavior:'smooth'})">Services</button>
+    <button class="nav-link" onclick="document.querySelector('#process').scrollIntoView({behavior:'smooth'})">Process</button>
+  </div>
+  <a href="tel:6474096027" class="nav-cta">647 409 6027</a>
+</nav>
+
+<section class="hero">
+  <div class="hero-image" style="background-image:url('images/3b339fe33761ed19.jpg');"></div>
+  <div class="hero-veil"></div>
+  <div class="hero-content">
+    <div class="hero-meta">
+      <div class="hero-meta-line"></div>
+      <div class="hero-meta-text">Greater Toronto Area · Corporate Housing</div>
+    </div>
+    <h1 class="hero-title">Premium Residences<br>for the <span class="accent">Modern Professional</span></h1>
+    <p class="hero-sub">Fully furnished, professionally managed homes designed for executive stays, project teams, and corporate relocations across the Greater Toronto Area.</p>
+    <div class="hero-actions">
+      <a href="tel:6474096027" class="btn-hero-primary">Book a Call <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></a>
+      <a href="#properties" class="btn-hero-secondary">View Properties</a>
+    </div>
+  </div>
+  <div class="scroll-indicator"><div class="label">Scroll</div><div class="line"></div></div>
+</section>
+
+<div class="announce">
+  <div class="announce-item"><div class="announce-num" data-count="3">3</div><div class="announce-label">Premium Properties</div></div>
+  <div class="announce-item"><div class="announce-num" data-count="4.9" data-decimals="1">4.9</div><div class="announce-label">Average Guest Rating</div></div>
+  <div class="announce-item"><div class="announce-num">24/7</div><div class="announce-label">Dedicated Support</div></div>
+  <div class="announce-item"><div class="announce-num">GTA</div><div class="announce-label">Service Coverage</div></div>
+</div>
+
+<section class="introduction" id="about">
+  <div class="section-inner intro-grid">
+    <div class="intro-image reveal">
+      <picture><source type="image/webp" srcset="images/296961f04fb4d835.webp"><img src="images/296961f04fb4d835.jpg" alt="Curated interior at The Garden Patio Residence" width="1400" height="933" decoding="async" loading="lazy"></picture>
+      <div class="intro-image-tag">Curated For The Modern Stay</div>
+    </div>
+    <div class="intro-content reveal reveal-d2">
+      <div class="eyebrow">Who We Are</div>
+      <h2 class="h-display">Hospitality with <span class="accent">Intention</span></h2>
+      <div class="intro-divider"></div>
+      <p class="lead">Elite Host Services delivers tailored corporate housing across the Greater Toronto Area for businesses that value comfort, reliability, and professional standards.</p>
+      <p>From executive relocations and project deployments to extended business stays, every residence is fully managed and prepared with the consistency corporate clients require.</p>
+      <p>We work directly with HR teams, relocation managers, and project leads, removing the complexity of accommodation planning so your people arrive to a home that is ready from day one.</p>
+      <p class="founder-note">Elite Host is family run. After years inside corporate environments ourselves, we watched companies wrestle with housing for relocating executives and project teams: hotels that strain budgets, inconsistent quality, and no one accountable when something needs attention. We built Elite Host Services to be the answer we kept looking for.</p>
+      <div class="trust-row">
+        <div class="trust-item">Owner answered, 24/7</div>
+        <div class="trust-item">All inclusive rates</div>
+        <div class="trust-item">Written corporate agreement</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="residences" id="properties">
+  <div class="section-inner">
+    <div class="residences-header">
+      <div class="reveal">
+        <div class="eyebrow">The Portfolio</div>
+        <h2 class="h-display">Featured <span class="accent">Residences</span></h2>
+      </div>
+      <div class="residences-intro-text reveal reveal-d2">
+        Three thoughtfully selected homes across Brampton, each designed to host corporate groups, project teams, and extended business stays in considered comfort.
+      </div>
+    </div>
+
+    <div class="residences-grid">
+      <a href="executive_estate.html" class="r-card reveal reveal-d1">
+        <div class="r-image">
+          <picture><source type="image/webp" srcset="images/7da214635a996add.webp"><img src="images/7da214635a996add.jpg" alt="The Executive Estate" width="1400" height="933" decoding="async" loading="lazy"></picture>
+          <div class="r-image-meta">Executive</div>
+          <div class="r-image-rating"><span class="stars">★ ★ ★ ★ ★</span><span class="score">5.0</span></div>
+          <div class="r-image-locale">Brampton, Ontario</div>
+        </div>
+        <div class="r-content">
+          <div class="r-name">The Executive Estate</div>
+          <div class="r-desc">A refined seven bedroom residence ideal for executive groups, premium placements, and extended corporate stays in elegant comfort.</div>
+          <div class="r-stats">
+            <div class="r-stat"><div class="v">14</div><div class="l">Guests</div></div>
+            <div class="r-stat"><div class="v">7</div><div class="l">Bedrooms</div></div>
+            <div class="r-stat"><div class="v">5.5</div><div class="l">Bathrooms</div></div>
+          </div>
+          <div class="r-cta">
+            <span class="r-cta-text">Discover the Property</span>
+            <span class="r-cta-arrow">&#8594;</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="garden_patio_residence.html" class="r-card reveal reveal-d2">
+        <div class="r-image">
+          <picture><source type="image/webp" srcset="images/3b339fe33761ed19.webp"><img src="images/3b339fe33761ed19.jpg" alt="The Garden Patio Residence" width="1400" height="933" decoding="async" loading="lazy"></picture>
+          <div class="r-image-meta">Flagship</div>
+          <div class="r-image-rating"><span class="stars">★ ★ ★ ★ ★</span><span class="score">4.97</span></div>
+          <div class="r-image-locale">Brampton, Ontario</div>
+        </div>
+        <div class="r-content">
+          <div class="r-name">The Garden Patio Residence</div>
+          <div class="r-desc">An estate style home with eight bedrooms, an entertainment basement, and a panoramic outdoor deck. Designed for distinguished groups.</div>
+          <div class="r-stats">
+            <div class="r-stat"><div class="v">16+</div><div class="l">Guests</div></div>
+            <div class="r-stat"><div class="v">8</div><div class="l">Bedrooms</div></div>
+            <div class="r-stat"><div class="v">8</div><div class="l">Bathrooms</div></div>
+          </div>
+          <div class="r-cta">
+            <span class="r-cta-text">Discover the Property</span>
+            <span class="r-cta-arrow">&#8594;</span>
+          </div>
+        </div>
+      </a>
+
+      <a href="team_stay_house.html" class="r-card reveal reveal-d3">
+        <div class="r-image">
+          <picture><source type="image/webp" srcset="images/e255d561a036a377.webp"><img src="images/e255d561a036a377.jpg" alt="The Team Stay House" width="1536" height="1024" decoding="async" loading="lazy"></picture>
+          <div class="r-image-meta">Team Stay</div>
+          <div class="r-image-rating"><span class="stars">★ ★ ★ ★ ★</span><span class="score">4.83</span></div>
+          <div class="r-image-locale">Brampton, Ontario</div>
+        </div>
+        <div class="r-content">
+          <div class="r-name">The Team Stay House</div>
+          <div class="r-desc">A brand new contemporary home with three separate lounges, a games room, and home theatre. Designed for project teams.</div>
+          <div class="r-stats">
+            <div class="r-stat"><div class="v">14</div><div class="l">Guests</div></div>
+            <div class="r-stat"><div class="v">7</div><div class="l">Bedrooms</div></div>
+            <div class="r-stat"><div class="v">3.5</div><div class="l">Bathrooms</div></div>
+          </div>
+          <div class="r-cta">
+            <span class="r-cta-text">Discover the Property</span>
+            <span class="r-cta-arrow">&#8594;</span>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="compare" id="compare">
+  <div class="section-inner">
+    <div class="compare-header reveal">
+      <div class="eyebrow">At a Glance</div>
+      <h2 class="h-display">Compare the <span class="accent">Residences</span></h2>
+    </div>
+    <div class="compare-scroll reveal reveal-d2">
+      <table class="compare-table">
+        <caption class="sr-only">Comparison of the three Elite Host residences</caption>
+        <thead>
+          <tr>
+            <th scope="col"><span class="sr-only">Feature</span></th>
+            <th scope="col">The Executive Estate</th>
+            <th scope="col">The Garden Patio Residence</th>
+            <th scope="col">The Team Stay House</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Bedrooms</th><td>7</td><td>8</td><td>7</td></tr>
+          <tr><th scope="row">Sleeps</th><td>14</td><td>16+</td><td>14</td></tr>
+          <tr><th scope="row">Bathrooms</th><td>5.5</td><td>8</td><td>3.5</td></tr>
+          <tr><th scope="row">Guest rating</th><td>5.0 <span class="cmp-count">(11 reviews)</span></td><td>4.97 <span class="cmp-count">(30 reviews)</span></td><td>4.83 <span class="cmp-count">(12 reviews)</span></td></tr>
+          <tr><th scope="row">Distinct character</th><td>Elegance and privacy for executive groups</td><td>Entertainment basement and panoramic outdoor deck</td><td>Three separate lounges across three levels</td></tr>
+          <tr class="cmp-links"><th scope="row"><span class="sr-only">Link</span></th><td><a href="executive_estate.html">View residence</a></td><td><a href="garden_patio_residence.html">View residence</a></td><td><a href="team_stay_house.html">View residence</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="philosophy">
+  <div class="reveal">
+    <div class="philosophy-quote">
+      <span class="quote-mark">"</span>
+      A home should welcome the moment guests arrive. Every residence is prepared with the quiet confidence that comes from professional management, refined detail, and genuine care for the people who stay with us.
+    </div>
+    <div class="philosophy-author">
+      <div class="philosophy-author-line"></div>
+      <div class="philosophy-author-text">The Elite Host Promise</div>
+    </div>
+  </div>
+</section>
+
+<section class="services" id="services">
+  <div class="section-inner">
+    <div class="services-header">
+      <div class="reveal">
+        <div class="eyebrow">What We Provide</div>
+        <h2 class="h-display">Considered <span class="accent">Service</span></h2>
+      </div>
+      <div class="services-intro-text reveal reveal-d2">
+        From the first enquiry through to departure, every detail is managed to corporate standard. Six considered services define the Elite Host experience.
+      </div>
+    </div>
+
+    <div class="svc-grid">
+      <div class="svc-item reveal reveal-d1">
+        <div class="svc-num">01.</div>
+        <div class="svc-title">Fully Furnished Residences</div>
+        <div class="svc-desc">Each home is move in ready, prepared with premium furnishings, hotel quality linens, and a complete suite of appliances.</div>
+      </div>
+      <div class="svc-item reveal reveal-d2">
+        <div class="svc-num">02.</div>
+        <div class="svc-title">Professional Housekeeping</div>
+        <div class="svc-desc">Regular cleaning and full linen service throughout every stay, with optional daily housekeeping for extended placements.</div>
+      </div>
+      <div class="svc-item reveal reveal-d3">
+        <div class="svc-num">03.</div>
+        <div class="svc-title">Dedicated Guest Support</div>
+        <div class="svc-desc">A direct line to our team is available throughout each stay for any guest need, request, or concern.</div>
+      </div>
+      <div class="svc-item reveal reveal-d1">
+        <div class="svc-num">04.</div>
+        <div class="svc-title">Flexible Lease Options</div>
+        <div class="svc-desc">From short term placements through to multi month corporate leases, terms are tailored to your team and timeline.</div>
+      </div>
+      <div class="svc-item reveal reveal-d2">
+        <div class="svc-num">05.</div>
+        <div class="svc-title">Consolidated Invoicing</div>
+        <div class="svc-desc">Single corporate invoices for simplified expense management, supporting clean reporting for finance teams.</div>
+      </div>
+      <div class="svc-item reveal reveal-d3">
+        <div class="svc-num">06.</div>
+        <div class="svc-title">Duty of Care Compliance</div>
+        <div class="svc-desc">Verified properties with safety inspections and security features, meeting the standards corporate travel requires.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="process" id="process">
+  <div class="section-inner">
+    <div class="process-header reveal">
+      <div class="eyebrow center">Simple Process</div>
+      <h2 class="h-display">From Enquiry to <span class="accent">Arrival</span></h2>
+      <p class="process-header-sub">Three considered steps from first contact to guests settling in. We handle the complexity so your team focuses on the work.</p>
+    </div>
+    <div class="process-grid">
+      <div class="process-step reveal reveal-d1">
+        <div class="process-num">01<span class="dot">.</span></div>
+        <h3>Book a Call</h3>
+        <p>Call or email to discuss your requirements, team size, and timelines. You speak directly with the owner and receive a prompt, tailored response.</p>
+      </div>
+      <div class="process-step reveal reveal-d2">
+        <div class="process-num">02<span class="dot">.</span></div>
+        <h3>Tailor the Contract</h3>
+        <p>We shape the engagement around your needs, from monthly arrangements to six and twelve month contracts that dedicate our residences to your organisation, with consolidated corporate invoicing throughout.</p>
+      </div>
+      <div class="process-step reveal reveal-d3">
+        <div class="process-num">03<span class="dot">.</span></div>
+        <h3>Effortless Arrival</h3>
+        <p>Give us one week of notice and the residence is professionally cleaned, fully stocked, and ready. Guests self check in via smartlock on their own schedule.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="clientele">
+  <div class="section-inner">
+    <div class="clientele-header">
+      <div class="reveal">
+        <div class="eyebrow">Who We Serve</div>
+        <h2 class="h-display">Trusted by <span class="accent">Industry</span></h2>
+      </div>
+      <div class="clientele-intro-text reveal reveal-d2">
+        Elite Host Services is built for organisations and professionals who require reliable, professional accommodation that reflects the standard of their business.
+      </div>
+    </div>
+
+    <div class="clientele-list reveal">
+      <div class="cli-row">
+        <div class="cli-num">01</div>
+        <div class="cli-name">Relocating Executives</div>
+        <div class="cli-desc">Premium accommodations for senior professionals during corporate relocation.</div>
+        <div class="cli-arrow">&#9670;</div>
+      </div>
+      <div class="cli-row">
+        <div class="cli-num">02</div>
+        <div class="cli-name">Project Teams &amp; Consultants</div>
+        <div class="cli-desc">Spacious multi bedroom homes for project teams requiring shared accommodation.</div>
+        <div class="cli-arrow">&#9670;</div>
+      </div>
+      <div class="cli-row">
+        <div class="cli-num">03</div>
+        <div class="cli-name">Contractors on Assignment</div>
+        <div class="cli-desc">Comfortable, fully managed homes for contractors on temporary placements.</div>
+        <div class="cli-arrow">&#9670;</div>
+      </div>
+      <div class="cli-row">
+        <div class="cli-num">04</div>
+        <div class="cli-name">Multi Guest Group Bookings</div>
+        <div class="cli-desc">Corporate groups requiring multiple bedrooms under one roof with shared amenities.</div>
+        <div class="cli-arrow">&#9670;</div>
+      </div>
+      <div class="cli-row">
+        <div class="cli-num">05</div>
+        <div class="cli-name">Intern &amp; Graduate Programs</div>
+        <div class="cli-desc">Affordable, professional housing for intern cohorts and graduate hire programs.</div>
+        <div class="cli-arrow">&#9670;</div>
+      </div>
+      <div class="cli-row">
+        <div class="cli-num">06</div>
+        <div class="cli-name">Executive &amp; VIP Travel</div>
+        <div class="cli-desc">Discreet, premium residences for senior executives and VIP business travellers.</div>
+        <div class="cli-arrow">&#9670;</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="faq" id="faq">
+  <div class="section-inner">
+    <div class="faq-header reveal">
+      <div class="eyebrow">Common Questions</div>
+      <h2 class="h-display">Direct <span class="accent">Answers</span></h2>
+    </div>
+    <div class="faq-list">
+      <details class="faq-item reveal"><summary><span>How do corporate contracts work?</span><span class="faq-mark" aria-hidden="true">+</span></summary><div class="faq-body"><p>Most engagements run as six or twelve month corporate contracts that dedicate our residences to your organisation. During the term, your people stay across the homes as your needs require. Monthly arrangements are also available.</p></div></details>
+      <details class="faq-item reveal"><summary><span>How much notice do you need before a stay?</span><span class="faq-mark" aria-hidden="true">+</span></summary><div class="faq-body"><p>One week. Tell us who is arriving and when, and the residence is prepared, cleaned, and stocked before they walk in.</p></div></details>
+      <details class="faq-item reveal"><summary><span>What is included in the rate?</span><span class="faq-mark" aria-hidden="true">+</span></summary><div class="faq-body"><p>Everything a working stay needs: a fully furnished home, utilities, WiFi, parking, and in suite laundry. Additional services can be arranged around your requirements.</p></div></details>
+      <details class="faq-item reveal"><summary><span>How do invoicing and payment work?</span><span class="faq-mark" aria-hidden="true">+</span></summary><div class="faq-body"><p>We issue formal corporate invoices, with payment accepted by credit card, direct deposit, and other channels. Billing terms are set out in your contract.</p></div></details>
+      <details class="faq-item reveal"><summary><span>Is there a formal agreement?</span><span class="faq-mark" aria-hidden="true">+</span></summary><div class="faq-body"><p>Yes. Every engagement is covered by a written Corporate Stay Agreement tailored to your contract terms.</p></div></details>
+      <details class="faq-item reveal"><summary><span>Who looks after our people during a stay?</span><span class="faq-mark" aria-hidden="true">+</span></summary><div class="faq-body"><p>One owner level point of contact, available 24/7. You will always know who picks up the phone.</p></div></details>
+      <details class="faq-item reveal"><summary><span>What does it cost?</span><span class="faq-mark" aria-hidden="true">+</span></summary><div class="faq-body"><p>Rates and terms are tailored to each engagement and depend on duration, residences, and services. Book a call and we will build a quote around your needs.</p></div></details>
+    </div>
+  </div>
+</section>
+
+<section class="invitation">
+  <div class="reveal">
+    <div class="eyebrow">An Invitation</div>
+    <h2 class="h-display">Begin a <span class="accent">Conversation</span></h2>
+    <p class="inv-sub">Reach out to discuss your housing requirements. Our team will respond promptly with tailored options for your business or team.</p>
+    <div class="inv-actions">
+      <a href="tel:6474096027" class="btn-inv-primary">Book a Call <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></a>
+      <a href="elite-host-enquire.html" class="btn-inv-secondary">Send a Note</a>
+    </div>
+    <div class="inv-contacts">
+      <div class="inv-contact"><div class="label">Phone</div><div class="val">647 409 6027</div></div>
+      <div class="inv-contact"><div class="label">Email</div><div class="val email">Richie.Furmah@gmail.com</div></div>
+      <div class="inv-contact"><div class="label">Service Area</div><div class="val" style="font-size:18px;">Greater Toronto Area</div></div>
+    </div>
+    <form class="inv-form" id="callRequest" action="https://api.web3forms.com/submit" method="POST">
+      <!-- Web3Forms: replace the access key below with your own from web3forms.com -->
+      <input type="hidden" name="access_key" value="REPLACE_WITH_YOUR_WEB3FORMS_ACCESS_KEY">
+      <input type="hidden" name="subject" value="New call request from rfelitehostservices.ca">
+      <input type="hidden" name="from_name" value="Elite Host Website">
+      <input type="checkbox" name="botcheck" class="inv-hp" tabindex="-1" autocomplete="off">
+      <div class="inv-form-title">Prefer we call you?</div>
+      <div class="inv-form-grid">
+        <label class="inv-field"><span>Name</span><input type="text" name="name" required autocomplete="name"></label>
+        <label class="inv-field"><span>Company</span><input type="text" name="company" autocomplete="organization"></label>
+        <label class="inv-field"><span>Email</span><input type="email" name="email" required autocomplete="email"></label>
+        <label class="inv-field"><span>Phone</span><input type="tel" name="phone" autocomplete="tel"></label>
+        <label class="inv-field inv-field-wide"><span>Dates and team size</span><input type="text" name="details" placeholder="e.g. 3 consultants, March through August"></label>
+      </div>
+      <button type="submit" class="btn-inv-primary inv-form-submit">Request a Call</button>
+      <div class="inv-form-status" id="callRequestStatus" role="status" aria-live="polite"></div>
+    </form>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-main">
+    <div class="footer-brand">
+      <div class="footer-logo"><svg viewBox="0 0 32 32" fill="none"><rect x="2" y="20" width="5" height="10" fill="#a08560"/><rect x="9" y="15" width="5" height="15" fill="#a08560" opacity=".85"/><rect x="16" y="9" width="5" height="21" fill="#a08560" opacity=".9"/><rect x="23" y="3" width="5" height="27" fill="#a08560"/><polyline points="4.5,18 11.5,13 18.5,7 26,1" stroke="#dcc596" stroke-width="1.4" fill="none" stroke-linecap="round"/><polyline points="23,1 26,1 26,4" stroke="#dcc596" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg><div class="footer-logo-text">ELITE HOST<span>Services</span></div></div>
+      <p class="footer-desc">Professional corporate housing across the Greater Toronto Area. Fully managed, fully furnished, and consistently prepared to a corporate standard.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Our Properties</h4>
+      <a href="executive_estate.html" class="footer-link">The Executive Estate</a>
+      <a href="garden_patio_residence.html" class="footer-link">The Garden Patio Residence</a>
+      <a href="team_stay_house.html" class="footer-link">The Team Stay House</a>
+    </div>
+    <div class="footer-col">
+      <h4>Direct Contact</h4>
+      <div class="footer-contact-item"><div class="fc-label">Phone</div><div class="fc-val">647 409 6027</div></div>
+      <div class="footer-contact-item"><div class="fc-label">Email</div><div class="fc-val" style="font-size:14px;">Richie.Furmah@gmail.com</div></div>
+      <div class="footer-contact-item"><div class="fc-label">Service Area</div><div class="fc-val" style="font-size:14px;">Greater Toronto Area</div></div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="footer-copy">&copy; <span id="footYear">2026</span> Elite Host Services. Brampton, Ontario, Canada.</div>
+    <div class="footer-tagline">Professional &middot; Reliable &middot; Discreet</div>
+  </div>
+</footer>
+
+<script>
+/* Reveal on scroll. If IntersectionObserver is missing or throws, show everything so the page is never stuck hidden. */
+(function(){
+  const items = document.querySelectorAll('.reveal');
+  function showAll(){ items.forEach(el => el.classList.add('visible')); }
+  if('IntersectionObserver' in window){
+    try{
+      const obs = new IntersectionObserver(entries => {
+        entries.forEach(e => { if(e.isIntersecting){ e.target.classList.add('visible'); obs.unobserve(e.target); } });
+      }, {threshold: 0.08});
+      items.forEach(el => obs.observe(el));
+    }catch(err){ showAll(); }
+  } else { showAll(); }
+
+/* Capture form: enhance with inline submit. Without JS the form still posts natively to Web3Forms. */
+(function(){
+  const f = document.getElementById('callRequest');
+  if(!f) return;
+  const status = document.getElementById('callRequestStatus');
+  f.addEventListener('submit', async function(e){
+    e.preventDefault();
+    status.textContent = 'Sending...';
+    try{
+      const res = await fetch(f.action, {method:'POST', body:new FormData(f), headers:{'Accept':'application/json'}});
+      if(res.ok){ f.reset(); status.textContent = 'Thank you. We will call you shortly.'; }
+      else{ throw new Error('bad response'); }
+    }catch(err){
+      status.textContent = 'Something went wrong. Call 647 409 6027 or email Richie.Furmah@gmail.com.';
+    }
+  });
+})();
+
+
+/* Stat counters. Numbers are in the HTML from the start; this only animates them once on first view. Skipped for reduced motion or missing IntersectionObserver. */
+(function(){
+  const nums = document.querySelectorAll('.announce-num[data-count]');
+  if(!nums.length) return;
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if(!('IntersectionObserver' in window)) return;
+  const animate = el => {
+    const target = parseFloat(el.dataset.count);
+    const dec = parseInt(el.dataset.decimals || '0', 10);
+    const dur = 900, t0 = performance.now();
+    function step(t){
+      const p = Math.min((t - t0) / dur, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = (target * eased).toFixed(dec);
+      if(p < 1) requestAnimationFrame(step);
+      else el.textContent = el.dataset.count;
+    }
+    requestAnimationFrame(step);
+  };
+  try{
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => { if(e.isIntersecting){ animate(e.target); io.unobserve(e.target); } });
+    }, {threshold: 0.4});
+    nums.forEach(el => io.observe(el));
+  }catch(err){ /* numbers already correct in HTML */ }
+})();
+
+  const fy = document.getElementById('footYear');
+  if(fy) fy.textContent = new Date().getFullYear();
+})();
+window.addEventListener('scroll', () => {
+  const nav = document.querySelector('nav');
+  if(window.scrollY > 60){
+    nav.style.height = '60px';
+    nav.style.background = 'rgba(10,14,26,0.95)';
+  } else {
+    nav.style.height = '72px';
+    nav.style.background = 'rgba(10,14,26,0.85)';
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>document.documentElement.classList.add('js');</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Garden Patio Residence · Elite Host Services</title>
+<meta name="description" content="Brampton's most distinguished estate style residence, offering eight bedrooms, an entertainment basement, and a panoramic outdoor deck. Designed to host up to sixteen guests in luxury hotel quality privacy.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+picture{display:contents;}
+:root{
+  --ink:#0a0e1a;
+  --ink2:#13192a;
+  --ink3:#1f2638;
+  --bronze:#a08560;
+  --bronze2:#c4a47a;
+  --bronze3:#dcc596;
+  --cream:#faf7f2;
+  --cream2:#f0ebe1;
+  --stone:#e8e2d6;
+  --line:#d8d2c5;
+  --body:#2a2e3a;
+  --muted:#6b6f7a;
+  --soft:#9ca0ab;
+}
+html{scroll-behavior:smooth;font-size:16px;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+body{font-family:"Inter","Helvetica Neue",sans-serif;background:var(--cream);color:var(--body);overflow-x:hidden;font-weight:400;line-height:1.6;}
+img{max-width:100%;display:block;}
+
+/* ── NAV ─────────────────────────────────────────────────── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:500;
+  background:rgba(10,14,26,0.85);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 56px;height:72px;
+  border-bottom:1px solid rgba(220,197,150,0.12);
+  transition:all 0.4s cubic-bezier(.2,.8,.2,1);
+}
+.nav-logo{display:flex;align-items:center;gap:14px;cursor:pointer;}
+.nav-logo svg{width:30px;height:30px;}
+.nav-brand{font-family:"Cormorant Garamond",serif;font-size:18px;font-weight:500;letter-spacing:2px;color:#fff;line-height:1;}
+.nav-brand span{display:block;font-family:"Inter",sans-serif;font-size:8px;font-weight:500;letter-spacing:4.5px;color:var(--bronze2);margin-top:6px;text-transform:uppercase;}
+.nav-back{
+  display:flex;align-items:center;gap:8px;
+  font-size:11px;letter-spacing:2px;font-weight:500;color:rgba(255,255,255,0.7);
+  cursor:pointer;background:none;border:none;
+  text-transform:uppercase;font-family:"Inter",sans-serif;
+  transition:color 0.25s;text-decoration:none;
+}
+.nav-back:hover{color:var(--bronze3);}
+.nav-back svg{width:14px;height:14px;}
+.nav-cta{
+  display:flex;align-items:center;gap:10px;
+  font-size:11px;letter-spacing:2px;font-weight:500;color:var(--bronze3);
+  text-decoration:none;border:1px solid rgba(220,197,150,0.4);
+  padding:10px 22px;text-transform:uppercase;
+  transition:all 0.3s;border-radius:0;
+}
+.nav-cta:hover{background:var(--bronze);color:#fff;border-color:var(--bronze);}
+
+/* ── HERO ────────────────────────────────────────────────── */
+.hero{position:relative;min-height:100vh;background:#000;overflow:hidden;}
+.hero-image{
+  position:absolute;inset:0;
+  background-size:cover;background-position:center;
+  transform:scale(1.05);
+  animation:slowZoom 12s ease-out forwards;
+}
+@keyframes slowZoom{to{transform:scale(1);}}
+.hero-veil{
+  position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(10,14,26,0.4) 0%,rgba(10,14,26,0.2) 40%,rgba(10,14,26,0.92) 100%);
+}
+.hero-content{
+  position:absolute;bottom:0;left:0;right:0;
+  padding:0 80px 90px;z-index:2;
+}
+.hero-meta{
+  display:flex;align-items:center;gap:14px;margin-bottom:32px;
+  animation:fadeUp 0.9s 0.3s both;
+}
+.hero-meta-line{width:48px;height:1px;background:var(--bronze3);}
+.hero-meta-text{
+  font-family:"Inter",sans-serif;font-size:10px;
+  letter-spacing:5px;color:var(--bronze3);
+  font-weight:500;text-transform:uppercase;
+}
+.hero-title{
+  font-family:"Cormorant Garamond",serif;
+  font-size:clamp(56px,8vw,116px);
+  font-weight:300;color:#fff;
+  line-height:0.95;letter-spacing:-0.015em;
+  margin-bottom:24px;max-width:1100px;
+  animation:fadeUp 0.9s 0.45s both;
+}
+.hero-title .accent{
+  font-style:italic;color:var(--bronze3);
+  font-weight:300;
+}
+.hero-sub{
+  font-family:"Inter",sans-serif;font-size:14px;
+  color:rgba(255,255,255,0.75);
+  letter-spacing:0.5px;line-height:1.7;
+  max-width:560px;margin-bottom:48px;
+  animation:fadeUp 0.9s 0.6s both;
+  font-weight:300;
+}
+.hero-card{
+  display:inline-flex;align-items:center;gap:36px;
+  background:rgba(255,255,255,0.06);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,0.1);
+  padding:24px 36px;
+  animation:fadeUp 0.9s 0.75s both;
+}
+.hc-stat{display:flex;flex-direction:column;}
+.hc-stat .v{
+  font-family:"Cormorant Garamond",serif;
+  font-size:28px;font-weight:400;color:#fff;
+  line-height:1;letter-spacing:-0.01em;
+}
+.hc-stat .l{
+  font-family:"Inter",sans-serif;font-size:10px;
+  letter-spacing:2px;color:rgba(255,255,255,0.55);
+  text-transform:uppercase;margin-top:6px;font-weight:500;
+}
+.hc-divider{width:1px;height:32px;background:rgba(255,255,255,0.15);}
+.hero-rating{
+  position:absolute;top:108px;right:80px;z-index:3;
+  display:flex;align-items:center;gap:12px;
+  background:rgba(255,255,255,0.06);
+  backdrop-filter:blur(20px);
+  border:1px solid rgba(220,197,150,0.25);
+  padding:10px 18px;
+  animation:fadeUp 0.9s 0.9s both;
+}
+.hero-rating .stars{color:var(--bronze3);font-size:11px;letter-spacing:3px;}
+.hero-rating .score{
+  font-family:"Cormorant Garamond",serif;
+  font-size:18px;font-weight:500;color:#fff;
+}
+.hero-rating .reviews{
+  font-size:10px;letter-spacing:1.5px;color:rgba(255,255,255,0.55);
+  text-transform:uppercase;font-weight:500;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:translateY(0);}}
+
+.scroll-indicator{
+  position:absolute;bottom:40px;left:50%;
+  transform:translateX(-50%);z-index:3;
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  animation:bobble 2.5s ease-in-out infinite;
+}
+@keyframes bobble{0%,100%{transform:translate(-50%,0);}50%{transform:translate(-50%,8px);}}
+.scroll-indicator .label{
+  font-size:9px;letter-spacing:4px;color:rgba(255,255,255,0.4);
+  text-transform:uppercase;font-weight:500;
+}
+.scroll-indicator .line{width:1px;height:48px;background:linear-gradient(to bottom,rgba(220,197,150,0.6),transparent);}
+
+/* ── SECTION COMMON ──────────────────────────────────────── */
+section{padding:140px 80px;position:relative;}
+.section-inner{max-width:1280px;margin:0 auto;}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:14px;
+  font-family:"Inter",sans-serif;font-size:10px;
+  letter-spacing:5px;color:var(--bronze);
+  font-weight:500;margin-bottom:24px;text-transform:uppercase;
+}
+.eyebrow::before{content:'';width:32px;height:1px;background:var(--bronze);}
+.h-display{
+  font-family:"Cormorant Garamond",serif;
+  font-size:clamp(36px,4.5vw,64px);
+  font-weight:300;color:var(--ink);
+  line-height:1.05;letter-spacing:-0.015em;
+}
+.h-display .accent{font-style:italic;color:var(--bronze);font-weight:300;}
+.h-section{
+  font-family:"Cormorant Garamond",serif;
+  font-size:clamp(28px,3vw,42px);
+  font-weight:300;color:var(--ink);
+  line-height:1.15;letter-spacing:-0.01em;
+}
+.h-section .accent{font-style:italic;color:var(--bronze);}
+
+/* ── EDITORIAL OVERVIEW (replaces old "About") ────────────── */
+.overview{
+  background:var(--cream);
+  padding:160px 80px;
+}
+.overview-grid{
+  display:grid;
+  grid-template-columns:1fr 1.2fr;
+  gap:120px;align-items:start;
+}
+.overview-left{position:sticky;top:120px;}
+.overview-left .h-display{margin-bottom:32px;}
+.overview-divider{
+  width:80px;height:2px;background:var(--bronze);
+  margin:0 0 40px;
+}
+.overview-meta{
+  display:flex;flex-direction:column;gap:0;
+  border-top:1px solid var(--line);
+}
+.overview-meta-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:18px 0;border-bottom:1px solid var(--line);
+}
+.overview-meta-row .key{
+  font-size:10px;letter-spacing:3px;color:var(--muted);
+  text-transform:uppercase;font-weight:500;
+}
+.overview-meta-row .val{
+  font-family:"Cormorant Garamond",serif;
+  font-size:18px;color:var(--ink);font-weight:400;
+}
+.overview-right{
+  font-family:"Cormorant Garamond",serif;
+  font-size:21px;line-height:1.7;
+  color:var(--body);font-weight:400;
+}
+.overview-right .lead{
+  font-size:24px;color:var(--ink);
+  font-weight:400;margin-bottom:32px;
+  line-height:1.55;
+}
+.overview-right p{margin-bottom:28px;font-style:normal;}
+.overview-right p:last-child{margin-bottom:0;}
+
+/* ── EDITORIAL GALLERY ──────────────────────────────────── */
+.gallery{padding:0;background:var(--cream);}
+.gallery-header{
+  text-align:center;padding:80px 80px 60px;
+  max-width:800px;margin:0 auto;
+}
+.gallery-header .eyebrow{justify-content:center;}
+.gallery-header .eyebrow::before{display:none;}
+.gallery-header .eyebrow::after{content:'';width:32px;height:1px;background:var(--bronze);}
+.gallery-grid{
+  display:grid;
+  grid-template-columns:repeat(12,1fr);
+  grid-auto-rows:200px;gap:8px;
+  padding:0 8px;
+}
+.g-cell{
+  position:relative;overflow:hidden;cursor:pointer;
+  background:var(--stone);
+}
+.g-cell img{
+  width:100%;height:100%;object-fit:cover;
+  transition:transform 1.2s cubic-bezier(.2,.8,.2,1);
+}
+.g-cell::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(to top,rgba(10,14,26,0.5),transparent 50%);
+  opacity:0;transition:opacity 0.4s;
+}
+.g-cell:hover::after{opacity:1;}
+.g-cell:hover img{transform:scale(1.06);}
+.g-cell-label{
+  position:absolute;bottom:18px;left:20px;right:20px;
+  font-family:"Inter",sans-serif;font-size:11px;
+  letter-spacing:1.5px;color:#fff;font-weight:500;
+  opacity:0;transform:translateY(8px);
+  transition:all 0.4s 0.05s;text-transform:uppercase;
+  z-index:1;
+}
+.g-cell:hover .g-cell-label{opacity:1;transform:translateY(0);}
+.g-cell:nth-child(1){grid-column:span 6;grid-row:span 2;}
+.g-cell:nth-child(2){grid-column:span 3;grid-row:span 2;}
+.g-cell:nth-child(3){grid-column:span 3;}
+.g-cell:nth-child(4){grid-column:span 3;}
+.g-cell:nth-child(5){grid-column:span 4;}
+.g-cell:nth-child(6){grid-column:span 4;}
+.g-cell:nth-child(7){grid-column:span 4;}
+.g-cell:nth-child(8){grid-column:span 6;grid-row:span 2;}
+.g-cell:nth-child(9){grid-column:span 3;}
+.g-cell:nth-child(10){grid-column:span 3;}
+.g-cell:nth-child(11){grid-column:span 3;}
+.g-cell:nth-child(12){grid-column:span 3;}
+
+.gallery-action{padding:60px 80px 100px;text-align:center;}
+.btn-view-all{
+  display:inline-flex;align-items:center;gap:14px;
+  background:var(--ink);color:#fff;
+  font-family:"Inter",sans-serif;font-size:11px;
+  letter-spacing:2.5px;font-weight:500;
+  padding:18px 40px;border:none;cursor:pointer;
+  text-transform:uppercase;transition:all 0.3s;
+}
+.btn-view-all:hover{background:var(--bronze);}
+.btn-view-all svg{width:14px;height:14px;}
+
+/* ── EXPERIENCE (Highlights) ─────────────────────────────── */
+.experience{
+  background:var(--ink);color:#fff;
+  padding:160px 80px;position:relative;overflow:hidden;
+}
+.experience::before{
+  content:'';position:absolute;top:-200px;right:-200px;
+  width:600px;height:600px;border-radius:50%;
+  background:radial-gradient(circle,rgba(196,164,122,0.08),transparent 70%);
+}
+.experience .eyebrow{color:var(--bronze3);}
+.experience .eyebrow::before{background:var(--bronze3);}
+.experience .h-display{color:#fff;}
+.experience .h-display .accent{color:var(--bronze3);}
+.experience-intro{
+  display:grid;grid-template-columns:1fr 1.5fr;gap:120px;
+  margin-bottom:100px;align-items:end;
+}
+.experience-intro-text{
+  font-family:"Cormorant Garamond",serif;
+  font-size:20px;line-height:1.6;color:rgba(255,255,255,0.7);
+  font-weight:300;
+}
+.exp-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:1px;background:rgba(220,197,150,0.15);
+}
+.exp-item{
+  background:var(--ink);
+  padding:48px 40px;
+  transition:background 0.4s;
+}
+.exp-item:hover{background:var(--ink2);}
+.exp-num{
+  font-family:"Cormorant Garamond",serif;
+  font-size:14px;color:var(--bronze3);
+  font-weight:400;letter-spacing:2px;
+  margin-bottom:24px;
+}
+.exp-title{
+  font-family:"Cormorant Garamond",serif;
+  font-size:26px;font-weight:400;color:#fff;
+  margin-bottom:14px;line-height:1.2;
+  letter-spacing:-0.01em;
+}
+.exp-desc{
+  font-size:13px;line-height:1.75;
+  color:rgba(255,255,255,0.6);font-weight:400;
+}
+
+/* ── SPACES (Rooms) ───────────────────────────────────── */
+.spaces{background:var(--cream);padding:160px 80px;}
+.spaces-header{
+  display:grid;grid-template-columns:1fr 1fr;gap:80px;
+  margin-bottom:80px;align-items:end;
+}
+.spaces-tabs{
+  display:flex;gap:0;
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  margin-bottom:60px;
+}
+.s-tab{
+  flex:1;padding:24px 32px;
+  font-family:"Inter",sans-serif;font-size:11px;
+  letter-spacing:3px;color:var(--muted);
+  font-weight:500;cursor:pointer;
+  background:none;border:none;
+  text-transform:uppercase;
+  transition:all 0.3s;position:relative;
+  border-right:1px solid var(--line);
+}
+.s-tab:last-child{border-right:none;}
+.s-tab.active{color:var(--ink);background:#fff;}
+.s-tab.active::after{
+  content:'';position:absolute;
+  bottom:-1px;left:0;right:0;height:2px;background:var(--bronze);
+}
+.s-tab:hover:not(.active){color:var(--ink);}
+.s-panel{display:none;}
+.s-panel.active{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+  gap:1px;background:var(--line);
+}
+.s-card{
+  background:#fff;padding:40px 36px;
+  transition:background 0.3s;
+}
+.s-card:hover{background:var(--cream2);}
+.s-card-num{
+  font-family:"Cormorant Garamond",serif;
+  font-size:13px;color:var(--bronze);
+  font-weight:400;letter-spacing:2px;
+  margin-bottom:16px;
+}
+.s-card h4{
+  font-family:"Cormorant Garamond",serif;
+  font-size:24px;font-weight:400;color:var(--ink);
+  margin-bottom:20px;line-height:1.2;
+}
+.s-feat{
+  display:flex;align-items:flex-start;gap:14px;
+  font-size:13px;color:var(--body);
+  padding:8px 0;line-height:1.6;
+}
+.s-feat::before{
+  content:'';width:5px;height:5px;background:var(--bronze);
+  border-radius:50%;flex-shrink:0;margin-top:8px;
+}
+
+/* ── AMENITIES (Editorial Grid) ─────────────────────────── */
+.amenities{
+  background:var(--ink2);color:#fff;
+  padding:160px 80px;
+}
+.amenities .eyebrow{color:var(--bronze3);}
+.amenities .eyebrow::before{background:var(--bronze3);}
+.amenities .h-display{color:#fff;}
+.amenities .h-display .accent{color:var(--bronze3);}
+.amenities-header{margin-bottom:80px;}
+.am-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:1px;background:rgba(220,197,150,0.12);
+}
+.am-cell{
+  background:var(--ink2);padding:36px 28px;
+  display:flex;flex-direction:column;gap:14px;
+  transition:background 0.3s;min-height:140px;
+}
+.am-cell:hover{background:var(--ink3);}
+.am-icon{
+  width:36px;height:36px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;color:var(--bronze3);
+}
+.am-name{
+  font-family:"Cormorant Garamond",serif;
+  font-size:17px;color:#fff;font-weight:400;
+  line-height:1.3;letter-spacing:-0.005em;
+}
+
+/* ── INVITATION (CTA) ─────────────────────────────────── */
+.invitation{
+  background:var(--cream);padding:180px 80px;
+  text-align:center;position:relative;overflow:hidden;
+}
+.invitation::before{
+  content:'';position:absolute;
+  top:50%;left:50%;transform:translate(-50%,-50%);
+  width:800px;height:800px;border-radius:50%;
+  border:1px solid rgba(160,133,96,0.08);
+  pointer-events:none;
+}
+.invitation::after{
+  content:'';position:absolute;
+  top:50%;left:50%;transform:translate(-50%,-50%);
+  width:500px;height:500px;border-radius:50%;
+  border:1px solid rgba(160,133,96,0.13);
+  pointer-events:none;
+}
+.invitation .eyebrow{justify-content:center;}
+.invitation .eyebrow::before{display:none;}
+.invitation .eyebrow::after{content:'';width:32px;height:1px;background:var(--bronze);}
+.invitation .h-display{
+  max-width:780px;margin:0 auto 28px;
+}
+.inv-sub{
+  font-family:"Cormorant Garamond",serif;
+  font-size:19px;color:var(--muted);
+  max-width:540px;margin:0 auto 56px;
+  line-height:1.6;font-weight:400;
+}
+.inv-actions{
+  display:flex;gap:16px;justify-content:center;
+  flex-wrap:wrap;position:relative;z-index:1;
+}
+.btn-primary{
+  display:inline-flex;align-items:center;gap:14px;
+  background:var(--ink);color:#fff;
+  font-family:"Inter",sans-serif;font-size:11px;
+  letter-spacing:2.5px;font-weight:500;
+  padding:20px 44px;text-decoration:none;
+  text-transform:uppercase;transition:all 0.3s;
+  border:none;cursor:pointer;
+}
+.btn-primary:hover{background:var(--bronze);}
+.btn-secondary{
+  display:inline-flex;align-items:center;gap:14px;
+  background:transparent;color:var(--ink);
+  font-family:"Inter",sans-serif;font-size:11px;
+  letter-spacing:2.5px;font-weight:500;
+  padding:20px 44px;border:1px solid var(--ink);
+  text-decoration:none;text-transform:uppercase;
+  transition:all 0.3s;cursor:pointer;
+}
+.btn-secondary:hover{background:var(--ink);color:#fff;}
+.inv-contacts{
+  margin-top:80px;padding-top:48px;
+  border-top:1px solid var(--line);
+  display:flex;gap:80px;justify-content:center;
+  flex-wrap:wrap;position:relative;z-index:1;
+}
+.inv-contact .label{
+  font-size:9px;letter-spacing:3.5px;color:var(--bronze);
+  font-weight:500;margin-bottom:8px;text-transform:uppercase;
+}
+.inv-contact .val{
+  font-family:"Cormorant Garamond",serif;
+  font-size:22px;font-weight:400;color:var(--ink);
+}
+.inv-contact .val.email{font-size:16px;}
+
+/* ── FOOTER ──────────────────────────────────────────── */
+footer{
+  background:var(--ink);padding:60px 80px 40px;
+  border-top:1px solid rgba(220,197,150,0.15);
+}
+.foot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;}
+.foot-brand{
+  font-family:"Cormorant Garamond",serif;font-size:14px;
+  font-weight:500;letter-spacing:2px;color:#fff;
+}
+.foot-brand span{color:var(--bronze3);}
+.foot-copy{
+  font-size:11px;color:rgba(255,255,255,0.4);
+  letter-spacing:0.5px;
+}
+.foot-tagline{
+  font-size:10px;color:var(--bronze3);letter-spacing:3px;
+  text-transform:uppercase;font-weight:500;
+}
+
+/* ── LIGHTBOX ────────────────────────────────────────── */
+.lightbox{
+  position:fixed;inset:0;z-index:1000;
+  background:rgba(10,14,26,0.97);
+  display:none;flex-direction:column;
+  align-items:center;justify-content:center;
+}
+.lightbox.open{display:flex;}
+.lb-main{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  padding:56px 72px;width:100%;position:relative;min-height:0;
+}
+.lb-main img{
+  max-width:100%;max-height:100%;object-fit:contain;
+  box-shadow:0 30px 80px rgba(0,0,0,0.5);
+}
+.lb-btn{
+  position:absolute;top:50%;transform:translateY(-50%);
+  background:rgba(160,133,96,0.18);
+  border:1px solid rgba(220,197,150,0.4);
+  color:var(--bronze3);width:56px;height:56px;
+  font-size:20px;cursor:pointer;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  transition:all 0.25s;
+}
+.lb-btn:hover{background:var(--bronze);color:#fff;border-color:var(--bronze);}
+.lb-prev{left:24px;}.lb-next{right:24px;}
+.lb-close{
+  position:absolute;top:20px;right:20px;z-index:2;
+  background:rgba(10,14,26,0.85);border:1.5px solid rgba(255,255,255,0.85);
+  color:#fff;font-size:22px;line-height:1;
+  width:48px;height:48px;cursor:pointer;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  transition:all 0.2s;
+}
+.lb-close:hover{background:var(--bronze);border-color:#fff;color:#fff;}
+.lightbox :focus-visible{outline:2px solid var(--bronze3);outline-offset:3px;}
+.lb-info{
+  text-align:center;padding:14px;color:rgba(255,255,255,0.5);
+  font-family:"Inter",sans-serif;font-size:12px;letter-spacing:1px;
+}
+.lb-label{color:rgba(255,255,255,0.85);font-weight:500;}
+.lb-counter{margin-top:6px;font-size:10px;letter-spacing:2.5px;color:var(--bronze3);text-transform:uppercase;}
+.lb-thumbs{
+  display:flex;gap:6px;padding:14px 24px 24px;
+  overflow-x:auto;max-width:100%;
+}
+.lb-thumb{
+  width:80px;height:54px;flex-shrink:0;object-fit:cover;
+  cursor:pointer;opacity:0.4;border:1px solid transparent;
+  transition:all 0.25s;
+}
+.lb-thumb.active{opacity:1;border-color:var(--bronze);}
+.lb-thumb:hover{opacity:0.8;}
+@media (max-width:640px){
+  .lb-main{padding:60px 12px 6px;}
+  .lb-btn{width:44px;height:44px;font-size:18px;}
+  .lb-prev{left:8px;}.lb-next{right:8px;}
+  .lb-close{top:12px;right:12px;width:44px;height:44px;}
+  .lb-thumb{width:60px;height:42px;}
+  .lb-thumbs{padding:10px 12px 16px;gap:5px;}
+}
+
+/* ── REVEALS ───────────────────────────────────────────── */
+/* Reveal content is visible by default. The fade-in is progressive enhancement, gated on .js, so blocked or failed JavaScript never blanks the page. */
+.reveal{opacity:1;transform:none;}
+.js .reveal{opacity:0;transform:translateY(32px);transition:opacity 0.9s cubic-bezier(.2,.8,.2,1),transform 0.9s cubic-bezier(.2,.8,.2,1);}
+.js .reveal.visible{opacity:1;transform:translateY(0);}
+.reveal-d1{transition-delay:0.1s;}.reveal-d2{transition-delay:0.2s;}.reveal-d3{transition-delay:0.3s;}.reveal-d4{transition-delay:0.4s;}
+@media (prefers-reduced-motion: reduce){
+  .js .reveal,.js .reveal.visible{opacity:1;transform:none;transition:none;}
+  *,*::before,*::after{animation-duration:0.001ms !important;animation-iteration-count:1 !important;transition-duration:0.001ms !important;scroll-behavior:auto !important;}
+}
+
+/* ── RESPONSIVE ─────────────────────────────────────────── */
+@media(max-width:1100px){
+  nav{padding:0 32px;}
+  section,.overview,.experience,.spaces,.amenities,.invitation{padding-left:32px;padding-right:32px;}
+  .gallery-header,.gallery-action{padding-left:32px;padding-right:32px;}
+  .hero-content{padding:0 40px 60px;}
+  .hero-rating{right:32px;top:88px;}
+  .overview{padding-top:120px;padding-bottom:120px;}
+  .overview-grid{grid-template-columns:1fr;gap:60px;}
+  .overview-left{position:static;}
+  .experience-intro{grid-template-columns:1fr;gap:40px;}
+  .exp-grid{grid-template-columns:1fr;}
+  .spaces-header{grid-template-columns:1fr;gap:40px;}
+  .am-grid{grid-template-columns:repeat(2,1fr);}
+  .gallery-grid{grid-template-columns:repeat(6,1fr);grid-auto-rows:160px;}
+  .g-cell:nth-child(n){grid-column:span 3;grid-row:span 1;}
+  .g-cell:nth-child(1){grid-column:span 6;grid-row:span 2;}
+}
+@media(max-width:680px){
+  nav{padding:0 20px;height:64px;}
+  .nav-cta{display:none;}
+  section,.overview,.experience,.spaces,.amenities,.invitation{padding:80px 24px;}
+  .hero-content{padding:0 24px 40px;}
+  .hero-rating{display:none;}
+  .hero-card{flex-wrap:wrap;gap:18px;padding:18px 24px;}
+  .hc-divider{display:none;}
+  .gallery-grid{grid-template-columns:1fr 1fr;}
+  .g-cell:nth-child(n){grid-column:span 1;}
+  .g-cell:nth-child(1){grid-column:span 2;}
+  .am-grid{grid-template-columns:1fr;}
+  .s-panel.active{grid-template-columns:1fr;}
+  .spaces-tabs{flex-direction:column;}
+  .s-tab{border-right:none;border-bottom:1px solid var(--line);}
+  .s-tab:last-child{border-bottom:none;}
+  .inv-contacts{flex-direction:column;gap:32px;}
+  .foot{flex-direction:column;text-align:center;}
+}
+</style>
+<link rel="canonical" href="https://www.rfelitehostservices.ca/garden_patio_residence.html">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32x32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="favicon-16x16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Elite Host Services">
+<meta property="og:locale" content="en_CA">
+<meta property="og:title" content="The Garden Patio Residence · Elite Host Services">
+<meta property="og:description" content="Brampton's most distinguished estate style residence, offering eight bedrooms, an entertainment basement, and a panoramic outdoor deck. Designed to host up to sixteen guests in luxury hotel quality privacy.">
+<meta property="og:url" content="https://www.rfelitehostservices.ca/garden_patio_residence.html">
+<meta property="og:image" content="https://www.rfelitehostservices.ca/images/og-garden.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Garden Patio Residence, estate exterior">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="The Garden Patio Residence · Elite Host Services">
+<meta name="twitter:description" content="Brampton's most distinguished estate style residence, offering eight bedrooms, an entertainment basement, and a panoramic outdoor deck. Designed to host up to sixteen guests in luxury hotel quality privacy.">
+<meta name="twitter:image" content="https://www.rfelitehostservices.ca/images/og-garden.jpg">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "LodgingBusiness",
+  "name": "The Garden Patio Residence",
+  "description": "Brampton's most distinguished estate style residence, offering eight bedrooms, an entertainment basement, and a panoramic outdoor deck. Designed to host up to sixteen guests in luxury hotel quality privacy.",
+  "url": "https://www.rfelitehostservices.ca/garden_patio_residence.html",
+  "image": [
+    "https://www.rfelitehostservices.ca/images/og-garden.jpg",
+    "https://www.rfelitehostservices.ca/images/3b339fe33761ed19.jpg"
+  ],
+  "telephone": "+1 647 409 6027",
+  "email": "Richie.Furmah@gmail.com",
+  "address": {
+    "@type": "PostalAddress",
+    "addressLocality": "Brampton",
+    "addressRegion": "ON",
+    "addressCountry": "CA"
+  },
+  "areaServed": {
+    "@type": "Place",
+    "name": "Greater Toronto Area"
+  },
+  "numberOfRooms": 8,
+  "amenityFeature": [
+    {
+      "@type": "LocationFeatureSpecification",
+      "name": "Free WiFi",
+      "value": true
+    },
+    {
+      "@type": "LocationFeatureSpecification",
+      "name": "Free parking",
+      "value": true
+    },
+    {
+      "@type": "LocationFeatureSpecification",
+      "name": "Full kitchen",
+      "value": true
+    },
+    {
+      "@type": "LocationFeatureSpecification",
+      "name": "Washer and dryer",
+      "value": true
+    }
+  ],
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "4.97",
+    "reviewCount": 30,
+    "bestRating": "5",
+    "worstRating": "1"
+  },
+  "parentOrganization": {
+    "@type": "Organization",
+    "name": "Elite Host Services"
+  }
+}
+</script>
+<link rel="preload" as="image" href="images/3b339fe33761ed19.jpg" fetchpriority="high">
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo" onclick="window.location.href='index.html'"><svg viewBox="0 0 32 32" fill="none"><rect x="2" y="20" width="5" height="10" fill="#a08560"/><rect x="9" y="15" width="5" height="15" fill="#a08560" opacity=".85"/><rect x="16" y="9" width="5" height="21" fill="#a08560" opacity=".9"/><rect x="23" y="3" width="5" height="27" fill="#a08560"/><polyline points="4.5,18 11.5,13 18.5,7 26,1" stroke="#dcc596" stroke-width="1.4" fill="none" stroke-linecap="round"/><polyline points="23,1 26,1 26,4" stroke="#dcc596" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg><div class="nav-brand">ELITE HOST<span>Services</span></div></div>
+  <a href="index.html" class="nav-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Properties</a>
+  <a href="tel:6474096027" class="nav-cta">647 409 6027</a>
+</nav>
+
+<section class="hero">
+  <div class="hero-image" style="background-image:url('images/3b339fe33761ed19.jpg');"></div>
+  <div class="hero-veil"></div>
+  <div class="hero-rating"><span class="stars">★ ★ ★ ★ ★</span><span class="score">4.97</span><span class="reviews">30 Reviews</span></div>
+  <div class="hero-content">
+    <div class="hero-meta"><div class="hero-meta-line"></div><div class="hero-meta-text">Brampton, Ontario · Entire Residence</div></div>
+    <h1 class="hero-title">The <span class="accent">Garden Patio Residence</span></h1>
+    <p class="hero-sub">Brampton's most distinguished estate style residence, offering eight bedrooms, an entertainment basement, and a panoramic outdoor deck. Designed to host up to sixteen guests in luxury hotel quality privacy.</p>
+    <div class="hero-card"><div class="hc-stat"><div class="v">16+</div><div class="l">Guests</div></div><div class="hc-divider"></div><div class="hc-stat"><div class="v">8</div><div class="l">Bedrooms</div></div><div class="hc-divider"></div><div class="hc-stat"><div class="v">8</div><div class="l">Bathrooms</div></div></div>
+  </div>
+  <div class="scroll-indicator"><div class="label">Scroll</div><div class="line"></div></div>
+</section>
+
+<section class="overview">
+  <div class="section-inner overview-grid">
+    <div class="overview-left reveal">
+      <div class="eyebrow">The Property</div>
+      <h2 class="h-display">A Considered <span class="accent">Residence</span></h2>
+      <div class="overview-divider"></div>
+      <div class="overview-meta"><div class="overview-meta-row"><span class="key">Location</span><span class="val">Brampton, Ontario</span></div><div class="overview-meta-row"><span class="key">Property Type</span><span class="val">Entire Estate Home</span></div><div class="overview-meta-row"><span class="key">Maximum Guests</span><span class="val">Sixteen Plus</span></div><div class="overview-meta-row"><span class="key">Total Bedrooms</span><span class="val">Eight</span></div><div class="overview-meta-row"><span class="key">Total Bathrooms</span><span class="val">Eight Full</span></div><div class="overview-meta-row"><span class="key">Levels</span><span class="val">Three Fully Finished</span></div><div class="overview-meta-row"><span class="key">Parking</span><span class="val">Eight Vehicles</span></div><div class="overview-meta-row"><span class="key">Style</span><span class="val">Luxury Estate</span></div></div>
+    </div>
+    <div class="overview-right reveal reveal-d2">
+      <p class="lead">An estate style residence where soaring ceilings, crystal chandeliers, and curated entertainment spaces redefine what a luxury group stay can be.</p>
+      <p>The grand main floor opens with coffered crown moulding and custom LED mood lighting throughout. The gourmet kitchen features full height cabinetry and an oversized granite island that flows seamlessly to a formal dining room and an elevated outdoor deck.</p><p>Eight elegantly appointed bedrooms occupy the upper level. Five feature private ensuite bathrooms, offering hotel quality privacy. The master suite is a sanctuary, complete with a spa calibre double vanity and a freestanding marble soaker tub.</p><p>The fully finished basement is a destination in its own right. A backlit luxury bar with high stools anchors the entertainment lounge, joined by an LED ceiling, electric fireplace, and a games area featuring air hockey and foosball. Outside, a vast estate backyard reveals a stone patio, a signature gazebo, and a private lawn.</p>
+    </div>
+  </div>
+</section>
+
+<section class="gallery">
+  <div class="gallery-header reveal">
+    <div class="eyebrow">Visual Tour</div>
+    <h2 class="h-display">Through the <span class="accent">Lens</span></h2>
+  </div>
+  <div class="gallery-grid"><div class="g-cell" onclick="openLb(0)"><picture><source type="image/webp" srcset="images/3b339fe33761ed19.webp"><img src="images/3b339fe33761ed19.jpg" alt="Estate Exterior · Rear View" loading="lazy" width="1400" height="933" decoding="async"></picture><div class="g-cell-label">Estate Exterior · Rear View</div></div>
+<div class="g-cell" onclick="openLb(1)"><picture><source type="image/webp" srcset="images/39b73c68b55f94c9.webp"><img src="images/39b73c68b55f94c9.jpg" alt="Premium Deck & Outdoor Dining" loading="lazy" width="1400" height="933" decoding="async"></picture><div class="g-cell-label">Premium Deck & Outdoor Dining</div></div>
+<div class="g-cell" onclick="openLb(2)"><picture><source type="image/webp" srcset="images/296961f04fb4d835.webp"><img src="images/296961f04fb4d835.jpg" alt="Panoramic Deck with Views" loading="lazy" width="1400" height="933" decoding="async"></picture><div class="g-cell-label">Panoramic Deck with Views</div></div>
+<div class="g-cell" onclick="openLb(3)"><picture><source type="image/webp" srcset="images/242a9df12031cef7.webp"><img src="images/242a9df12031cef7.jpg" alt="Backyard Gazebo & Stone Patio" loading="lazy" width="1400" height="933" decoding="async"></picture><div class="g-cell-label">Backyard Gazebo & Stone Patio</div></div>
+<div class="g-cell" onclick="openLb(4)"><picture><source type="image/webp" srcset="images/493ce52ae1246e0d.webp"><img src="images/493ce52ae1246e0d.jpg" alt="Aerial View · Gazebo & Gardens" loading="lazy" width="1400" height="933" decoding="async"></picture><div class="g-cell-label">Aerial View · Gazebo & Gardens</div></div>
+<div class="g-cell" onclick="openLb(5)"><picture><source type="image/webp" srcset="images/84ffca844bd4cd92.webp"><img src="images/84ffca844bd4cd92.jpg" alt="Expansive Private Backyard" loading="lazy" width="1400" height="933" decoding="async"></picture><div class="g-cell-label">Expansive Private Backyard</div></div>
+<div class="g-cell" onclick="openLb(6)"><picture><source type="image/webp" srcset="images/41266a29ed6dff3a.webp"><img src="images/41266a29ed6dff3a.jpg" alt="Grand Family Room · Chandelier" loading="lazy" width="1400" height="933" decoding="async"></picture><div class="g-cell-label">Grand Family Room · Chandelier</div></div>
+<div class="g-cell" onclick="openLb(7)"><picture><source type="image/webp" srcset="images/ba82990b14d5703d.webp"><img src="images/ba82990b14d5703d.jpg" alt="Formal Living Room · Blue Velvet" loading="lazy" width="1400" height="933" decoding="async"></picture><div class="g-cell-label">Formal Living Room · Blue Velvet</div></div>
+<div class="g-cell" onclick="openLb(8)"><picture><source type="image/webp" srcset="images/84369a2997c26bbe.webp"><img src="images/84369a2997c26bbe.jpg" alt="Elegant Sitting Room" loading="lazy" width="1400" height="933" decoding="async"></picture><div class="g-cell-label">Elegant Sitting Room</div></div>
+<div class="g-cell" onclick="openLb(9)"><picture><source type="image/webp" srcset="images/ff2240fe7c435deb.webp"><img src="images/ff2240fe7c435deb.jpg" alt="Gourmet Kitchen · Crystal Chandelier" loading="lazy" width="1400" height="933" decoding="async"></picture><div class="g-cell-label">Gourmet Kitchen · Crystal Chandelier</div></div>
+<div class="g-cell" onclick="openLb(10)"><picture><source type="image/webp" srcset="images/879ce304f5be9e92.webp"><img src="images/879ce304f5be9e92.jpg" alt="Formal Dining Room · LED Ceiling" loading="lazy" width="1400" height="933" decoding="async"></picture><div class="g-cell-label">Formal Dining Room · LED Ceiling</div></div>
+<div class="g-cell" onclick="openLb(11)"><picture><source type="image/webp" srcset="images/9aaa5a46616d3896.webp"><img src="images/9aaa5a46616d3896.jpg" alt="Basement Lounge · Smart TV & Fireplace" loading="lazy" width="1400" height="933" decoding="async"></picture><div class="g-cell-label">Basement Lounge · Smart TV & Fireplace</div></div></div>
+  <div class="gallery-action reveal">
+    <button class="btn-view-all" onclick="openLb(0)">View All 20 Photographs <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
+  </div>
+</section>
+
+<section class="experience">
+  <div class="section-inner">
+    <div class="experience-intro">
+      <div class="reveal">
+        <div class="eyebrow">The Experience</div>
+        <h2 class="h-display">Curated <span class="accent">Highlights</span></h2>
+      </div>
+      <div class="experience-intro-text reveal reveal-d2">Estate Style Luxury for Distinguished Groups. Six considered touchpoints define the experience awaiting every guest.</div>
+    </div>
+    <div class="exp-grid"><div class="exp-item reveal reveal-d1"><div class="exp-num">01.</div><div class="exp-title">Entertainment Basement</div><div class="exp-desc">An LED illuminated lounge with luxury bar, fireplace, Smart TV, and a dedicated games area.</div></div><div class="exp-item reveal reveal-d2"><div class="exp-num">02.</div><div class="exp-title">Five Private Ensuites</div><div class="exp-desc">Five of the eight bedrooms feature private ensuite bathrooms for hotel level comfort.</div></div><div class="exp-item reveal reveal-d3"><div class="exp-num">03.</div><div class="exp-title">Panoramic Outdoor Deck</div><div class="exp-desc">An elevated wood deck offers spectacular views and ample dining and lounging space.</div></div><div class="exp-item reveal reveal-d1"><div class="exp-num">04.</div><div class="exp-title">Crystal Chandeliers</div><div class="exp-desc">Designer lighting and coffered ceilings elevate every primary living space.</div></div><div class="exp-item reveal reveal-d2"><div class="exp-num">05.</div><div class="exp-title">Spa Style Master Ensuite</div><div class="exp-desc">A marble soaker tub, double vanity, and separate glass shower form a private retreat.</div></div><div class="exp-item reveal reveal-d3"><div class="exp-num">06.</div><div class="exp-title">Eight Vehicle Parking</div><div class="exp-desc">Six driveway spaces and two garage spaces accommodate large group arrivals with ease.</div></div></div>
+  </div>
+</section>
+
+<section class="spaces">
+  <div class="section-inner">
+    <div class="spaces-header">
+      <div class="reveal">
+        <div class="eyebrow">Floor by Floor</div>
+        <h2 class="h-display">Every <span class="accent">Space</span></h2>
+      </div>
+      <div class="reveal reveal-d2" style="font-family:'Cormorant Garamond',serif;font-size:18px;line-height:1.6;color:var(--muted);">A complete view of every room across all three levels of the residence.</div>
+    </div>
+    <div class="spaces-tabs"><button class="s-tab active" onclick="showSpace(0,this)">Main Floor</button><button class="s-tab " onclick="showSpace(1,this)">Upper Level</button><button class="s-tab " onclick="showSpace(2,this)">Basement Level</button></div><div class="s-panel active"><div class="s-card reveal reveal-d1"><div class="s-card-num">01.</div><h4>Grand Family Room</h4><div class="s-feat">Sectional sofas and 65 inch Smart TV</div><div class="s-feat">Coffered ceiling with crystal chandelier</div><div class="s-feat">Custom LED mood lighting</div><div class="s-feat">Direct views to the outdoor deck</div></div><div class="s-card reveal reveal-d2"><div class="s-card-num">02.</div><h4>Formal Living Room</h4><div class="s-feat">Blue velvet Chesterfield sofas</div><div class="s-feat">Bay windows and designer rugs</div><div class="s-feat">Crystal chandelier centerpiece</div></div><div class="s-card reveal reveal-d3"><div class="s-card-num">03.</div><h4>Gourmet Kitchen</h4><div class="s-feat">Full height custom cabinetry</div><div class="s-feat">Oversized granite island</div><div class="s-feat">Crystal chandelier and pendant lights</div><div class="s-feat">Fully stocked with all essentials</div></div><div class="s-card reveal reveal-d4"><div class="s-card-num">04.</div><h4>Dining Room</h4><div class="s-feat">Formal dining seating eight or more</div><div class="s-feat">LED tray ceiling and feature wall</div><div class="s-feat">Second dining area off the kitchen</div></div><div class="s-card reveal reveal-d1"><div class="s-card-num">05.</div><h4>Bedroom One · Queen</h4><div class="s-feat">Queen bed with private ensuite</div><div class="s-feat">Ideal for guests needing ground floor access</div></div><div class="s-card reveal reveal-d2"><div class="s-card-num">06.</div><h4>Outdoor Spaces</h4><div class="s-feat">Elevated wood deck with patio dining</div><div class="s-feat">Stone patio and signature gazebo</div><div class="s-feat">Expansive private lawn area</div></div></div><div class="s-panel "><div class="s-card reveal reveal-d1"><div class="s-card-num">01.</div><h4>Bedroom Two · King with Fireplace</h4><div class="s-feat">King bed with adjoining queen room</div><div class="s-feat">In room fireplace feature</div><div class="s-feat">Premium carpet and designer décor</div></div><div class="s-card reveal reveal-d2"><div class="s-card-num">02.</div><h4>Bedroom Three · King with Ensuite</h4><div class="s-feat">King bed with private ensuite</div><div class="s-feat">Designer feature wallpaper</div><div class="s-feat">Panoramic windows with views</div></div><div class="s-card reveal reveal-d3"><div class="s-card-num">03.</div><h4>Bedrooms Four, Five and Six</h4><div class="s-feat">Three queen bedrooms</div><div class="s-feat">Each with private ensuite bathroom</div><div class="s-feat">Fresh linens and plush towels</div></div><div class="s-card reveal reveal-d4"><div class="s-card-num">04.</div><h4>Bedroom Seven · Queen</h4><div class="s-feat">Queen bed with private ensuite</div><div class="s-feat">Dark hardwood flooring</div></div><div class="s-card reveal reveal-d1"><div class="s-card-num">05.</div><h4>Bedroom Eight · Twin</h4><div class="s-feat">Single twin bed, ideal for one guest</div><div class="s-feat">Natural light and ample storage</div></div><div class="s-card reveal reveal-d2"><div class="s-card-num">06.</div><h4>Master Ensuite</h4><div class="s-feat">Full width double vanity</div><div class="s-feat">Marble surround soaker tub</div><div class="s-feat">Separate glass walk in shower</div><div class="s-feat">Laundry room on this level</div></div></div><div class="s-panel "><div class="s-card reveal reveal-d1"><div class="s-card-num">01.</div><h4>Entertainment Lounge</h4><div class="s-feat">Smart TV with Netflix and streaming</div><div class="s-feat">Electric fireplace feature</div><div class="s-feat">Plush sofa seating for groups</div><div class="s-feat">Custom LED ceiling ambiance</div></div><div class="s-card reveal reveal-d2"><div class="s-card-num">02.</div><h4>Luxury Bar</h4><div class="s-feat">Backlit LED bar with high stools</div><div class="s-feat">Built in wine display shelving</div><div class="s-feat">Pendant barrel lighting</div></div><div class="s-card reveal reveal-d3"><div class="s-card-num">03.</div><h4>Games Area</h4><div class="s-feat">Air hockey table</div><div class="s-feat">Foosball table</div><div class="s-feat">Board games for groups</div></div><div class="s-card reveal reveal-d4"><div class="s-card-num">04.</div><h4>Basement Bathroom</h4><div class="s-feat">Full bathroom with glass shower</div><div class="s-feat">Designer mosaic tile feature wall</div><div class="s-feat">Modern grey vanity with quartz counter</div></div></div>
+  </div>
+</section>
+
+<section class="amenities">
+  <div class="section-inner">
+    <div class="amenities-header reveal">
+      <div class="eyebrow">All Inclusive</div>
+      <h2 class="h-display">Twenty Considered <span class="accent">Amenities</span></h2>
+    </div>
+    <div class="am-grid"><div class="am-cell reveal reveal-d1"><div class="am-icon">◆</div><div class="am-name">Fully Equipped Gourmet Kitchen</div></div><div class="am-cell reveal reveal-d2"><div class="am-icon">◆</div><div class="am-name">High Speed Wi Fi</div></div><div class="am-cell reveal reveal-d3"><div class="am-icon">◆</div><div class="am-name">Free Parking, Eight Spots</div></div><div class="am-cell reveal reveal-d4"><div class="am-icon">◆</div><div class="am-name">Two 65 Inch Smart Televisions</div></div><div class="am-cell reveal reveal-d1"><div class="am-icon">◆</div><div class="am-name">Washer and Dryer</div></div><div class="am-cell reveal reveal-d2"><div class="am-icon">◆</div><div class="am-name">Electric Fireplace, Basement</div></div><div class="am-cell reveal reveal-d3"><div class="am-icon">◆</div><div class="am-name">Expansive Estate Grounds</div></div><div class="am-cell reveal reveal-d4"><div class="am-icon">◆</div><div class="am-name">Premium Elevated Deck</div></div><div class="am-cell reveal reveal-d1"><div class="am-icon">◆</div><div class="am-name">Signature Gazebo and Stone Patio</div></div><div class="am-cell reveal reveal-d2"><div class="am-icon">◆</div><div class="am-name">Luxury LED Bar with Stools</div></div><div class="am-cell reveal reveal-d3"><div class="am-icon">◆</div><div class="am-name">Air Hockey Table</div></div><div class="am-cell reveal reveal-d4"><div class="am-icon">◆</div><div class="am-name">Foosball Table</div></div><div class="am-cell reveal reveal-d1"><div class="am-icon">◆</div><div class="am-name">Board Games Collection</div></div><div class="am-cell reveal reveal-d2"><div class="am-icon">◆</div><div class="am-name">Marble Soaker Bathtub</div></div><div class="am-cell reveal reveal-d3"><div class="am-icon">◆</div><div class="am-name">Multiple Glass Shower Ensuites</div></div><div class="am-cell reveal reveal-d4"><div class="am-icon">◆</div><div class="am-name">Premium Hotel Linens</div></div><div class="am-cell reveal reveal-d1"><div class="am-icon">◆</div><div class="am-name">Custom LED Mood Lighting</div></div><div class="am-cell reveal reveal-d2"><div class="am-icon">◆</div><div class="am-name">Air Conditioning</div></div><div class="am-cell reveal reveal-d3"><div class="am-icon">◆</div><div class="am-name">Self Check In, Smartlock</div></div><div class="am-cell reveal reveal-d4"><div class="am-icon">◆</div><div class="am-name">Exterior Security Cameras</div></div></div>
+  </div>
+</section>
+
+<section class="invitation">
+  <div class="reveal">
+    <div class="eyebrow">An Invitation</div>
+    <h2 class="h-display">Discover <span class="accent">The Garden Patio Residence</span></h2>
+    <p class="inv-sub">Reach out directly to discuss availability, arrange a flexible check in, or explore corporate stay options tailored to your group.</p>
+    <div class="inv-actions">
+      <a href="tel:6474096027" class="btn-primary">Book a Call <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></a>
+      <a href="elite-host-enquire.html" class="btn-secondary">Send a Note <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></a>
+    </div>
+    <div class="inv-contacts">
+      <div class="inv-contact"><div class="label">Phone</div><div class="val">647 409 6027</div></div>
+      <div class="inv-contact"><div class="label">Email</div><div class="val email">Richie.Furmah@gmail.com</div></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="foot">
+    <div class="foot-brand">ELITE HOST <span>SERVICES</span></div>
+    <div class="foot-tagline">Professional · Reliable · Discreet</div>
+    <div class="foot-copy">&copy; <span id="footYear">2026</span> Elite Host Services. Brampton, Ontario, Canada.</div>
+  </div>
+</footer>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Photo gallery">
+  <button class="lb-close" onclick="closeLb()" aria-label="Close gallery">&#10005;</button>
+  <div class="lb-main" id="lb-main">
+    <button class="lb-btn lb-prev" onclick="lbNav(-1)" aria-label="Previous photo">&#8592;</button>
+    <img id="lb-img" src="" alt="">
+    <button class="lb-btn lb-next" onclick="lbNav(1)" aria-label="Next photo">&#8594;</button>
+  </div>
+  <div class="lb-info"><div class="lb-label" id="lb-label"></div><div class="lb-counter" id="lb-counter"></div></div>
+  <div class="lb-thumbs" id="lb-thumbs"><picture><source type="image/webp" srcset="images/3b339fe33761ed19.webp"><img src="images/3b339fe33761ed19.jpg" class="lb-thumb" alt="Estate Exterior · Rear View" onclick="goLb(0)" width="1400" height="933" decoding="async" loading="lazy"></picture>
+<picture><source type="image/webp" srcset="images/39b73c68b55f94c9.webp"><img src="images/39b73c68b55f94c9.jpg" class="lb-thumb" alt="Premium Deck & Outdoor Dining" onclick="goLb(1)" width="1400" height="933" decoding="async" loading="lazy"></picture>
+<picture><source type="image/webp" srcset="images/296961f04fb4d835.webp"><img src="images/296961f04fb4d835.jpg" class="lb-thumb" alt="Panoramic Deck with Views" onclick="goLb(2)" width="1400" height="933" decoding="async" loading="lazy"></picture>
+<picture><source type="image/webp" srcset="images/242a9df12031cef7.webp"><img src="images/242a9df12031cef7.jpg" class="lb-thumb" alt="Backyard Gazebo & Stone Patio" onclick="goLb(3)" width="1400" height="933" decoding="async" loading="lazy"></picture>
+<picture><source type="image/webp" srcset="images/493ce52ae1246e0d.webp"><img src="images/493ce52ae1246e0d.jpg" class="lb-thumb" alt="Aerial View · Gazebo & Gardens" onclick="goLb(4)" width="1400" height="933" decoding="async" loading="lazy"></picture>
+<picture><source type="image/webp" srcset="images/84ffca844bd4cd92.webp"><img src="images/84ffca844bd4cd92.jpg" class="lb-thumb" alt="Expansive Private Backyard" onclick="goLb(5)" width="1400" height="933" decoding="async" loading="lazy"></picture>
+<picture><source type="image/webp" srcset="images/41266a29ed6dff3a.webp"><img src="images/41266a29ed6dff3a.jpg" class="lb-thumb" alt="Grand Family Room · Chandelier" onclick="goLb(6)" width="1400" height="933" decoding="async" loading="lazy"></picture>
+<picture><source type="image/webp" srcset="images/ba82990b14d5703d.webp"><img src="images/ba82990b14d5703d.jpg" class="lb-thumb" alt="Formal Living Room · Blue Velvet" onclick="goLb(7)" width="1400" height="933" decoding="async" loading="lazy"></picture>
+<picture><source type="image/webp" srcset="images/84369a2997c26bbe.webp"><img src="images/84369a2997c26bbe.jpg" class="lb-thumb" alt="Elegant Sitting Room" onclick="goLb(8)" width="1400" height="933" decoding="async" loading="lazy"></picture>
+<picture><source type="image/webp" srcset="images/ff2240fe7c435deb.webp"><img src="images/ff2240fe7c435deb.jpg" class="lb-thumb" alt="Gourmet Kitchen · Crystal Chandelier" onclick="goLb(9)" width="1400" height="933" decoding="async" loading="lazy"></picture>
+<picture><source type="image/webp" srcset="images/879ce304f5be9e92.webp"><img src="images/879ce304f5be9e92.jpg" class="lb-thumb" alt="Formal Dining Room · LED Ceiling" onclick="goLb(10)" width="1400" height="933" decoding="async" loading="lazy"></picture>
+<picture><source type="image/webp" srcset="images/9aaa5a46616d3896.webp"><img src="images/9aaa5a46616d3896.jpg" class="lb-thumb" alt="Basement Lounge · Smart TV & Fireplace" onclick="goLb(11)" width="1400" height="933" decoding="async" loading="lazy"></picture>
+<picture><source type="image/webp" srcset="images/bb7e6e55fa063398.webp"><img src="images/bb7e6e55fa063398.jpg" class="lb-thumb" alt="Basement Entertainment Hall" onclick="goLb(12)" width="1400" height="933" decoding="async" loading="lazy"></picture>
+<picture><source type="image/webp" srcset="images/4a5ec9375587dd51.webp"><img src="images/4a5ec9375587dd51.jpg" class="lb-thumb" alt="Luxury Bar · LED Backlit" onclick="goLb(13)" width="1400" height="933" decoding="async" loading="lazy"></picture>
+<picture><source type="image/webp" srcset="images/e89ba690aba4b712.webp"><img src="images/e89ba690aba4b712.jpg" class="lb-thumb" alt="King Bedroom Suite" onclick="goLb(14)" width="1400" height="933" decoding="async" loading="lazy"></picture>
+<picture><source type="image/webp" srcset="images/858a7af65feab0e5.webp"><img src="images/858a7af65feab0e5.jpg" class="lb-thumb" alt="Queen Bedroom with Ensuite" onclick="goLb(15)" width="1400" height="933" decoding="async" loading="lazy"></picture>
+<picture><source type="image/webp" srcset="images/06b604f5bbb928f1.webp"><img src="images/06b604f5bbb928f1.jpg" class="lb-thumb" alt="Designer Wallpaper King Bedroom" onclick="goLb(16)" width="1400" height="933" decoding="async" loading="lazy"></picture>
+<picture><source type="image/webp" srcset="images/682f5e50fcf56927.webp"><img src="images/682f5e50fcf56927.jpg" class="lb-thumb" alt="Master Ensuite · Double Vanity" onclick="goLb(17)" width="1400" height="933" decoding="async" loading="lazy"></picture>
+<picture><source type="image/webp" srcset="images/4f7287acf6736949.webp"><img src="images/4f7287acf6736949.jpg" class="lb-thumb" alt="Spa Soaker Tub · Marble Surround" onclick="goLb(18)" width="1400" height="933" decoding="async" loading="lazy"></picture>
+<picture><source type="image/webp" srcset="images/4b3c86c6ca3508af.webp"><img src="images/4b3c86c6ca3508af.jpg" class="lb-thumb" alt="Modern Mosaic Tile Bathroom" onclick="goLb(19)" width="1400" height="933" decoding="async" loading="lazy"></picture></div>
+</div>
+
+<script>
+const PHOTOS=[{l:"Estate Exterior \u00b7 Rear View",s:"images/3b339fe33761ed19.jpg"},{l:"Premium Deck & Outdoor Dining",s:"images/39b73c68b55f94c9.jpg"},{l:"Panoramic Deck with Views",s:"images/296961f04fb4d835.jpg"},{l:"Backyard Gazebo & Stone Patio",s:"images/242a9df12031cef7.jpg"},{l:"Aerial View \u00b7 Gazebo & Gardens",s:"images/493ce52ae1246e0d.jpg"},{l:"Expansive Private Backyard",s:"images/84ffca844bd4cd92.jpg"},{l:"Grand Family Room \u00b7 Chandelier",s:"images/41266a29ed6dff3a.jpg"},{l:"Formal Living Room \u00b7 Blue Velvet",s:"images/ba82990b14d5703d.jpg"},{l:"Elegant Sitting Room",s:"images/84369a2997c26bbe.jpg"},{l:"Gourmet Kitchen \u00b7 Crystal Chandelier",s:"images/ff2240fe7c435deb.jpg"},{l:"Formal Dining Room \u00b7 LED Ceiling",s:"images/879ce304f5be9e92.jpg"},{l:"Basement Lounge \u00b7 Smart TV & Fireplace",s:"images/9aaa5a46616d3896.jpg"},{l:"Basement Entertainment Hall",s:"images/bb7e6e55fa063398.jpg"},{l:"Luxury Bar \u00b7 LED Backlit",s:"images/4a5ec9375587dd51.jpg"},{l:"King Bedroom Suite",s:"images/e89ba690aba4b712.jpg"},{l:"Queen Bedroom with Ensuite",s:"images/858a7af65feab0e5.jpg"},{l:"Designer Wallpaper King Bedroom",s:"images/06b604f5bbb928f1.jpg"},{l:"Master Ensuite \u00b7 Double Vanity",s:"images/682f5e50fcf56927.jpg"},{l:"Spa Soaker Tub \u00b7 Marble Surround",s:"images/4f7287acf6736949.jpg"},{l:"Modern Mosaic Tile Bathroom",s:"images/4b3c86c6ca3508af.jpg"}];
+let LB_CUR = 0;
+let LB_TRIGGER = null;
+const LB = document.getElementById('lightbox');
+const LB_REDUCE = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function openLb(idx){
+  LB_TRIGGER = document.activeElement;
+  LB_CUR = idx;
+  updateLb();
+  LB.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  const closeBtn = LB.querySelector('.lb-close');
+  if(closeBtn) closeBtn.focus();
+}
+function closeLb(){
+  LB.classList.remove('open');
+  document.body.style.overflow = '';
+  if(LB_TRIGGER && typeof LB_TRIGGER.focus === 'function') LB_TRIGGER.focus();
+}
+function lbNav(dir){
+  LB_CUR = (LB_CUR + dir + PHOTOS.length) % PHOTOS.length;
+  updateLb();
+}
+function goLb(idx){
+  LB_CUR = idx;
+  updateLb();
+}
+function updateLb(){
+  const p = PHOTOS[LB_CUR];
+  const img = document.getElementById('lb-img');
+  img.src = p.s;
+  img.alt = p.l;
+  document.getElementById('lb-label').textContent = p.l;
+  document.getElementById('lb-counter').textContent = (LB_CUR+1) + ' / ' + PHOTOS.length;
+  document.querySelectorAll('.lb-thumb').forEach((t,i) => t.classList.toggle('active', i === LB_CUR));
+  document.querySelectorAll('.lb-thumb')[LB_CUR]?.scrollIntoView({behavior: LB_REDUCE ? 'auto' : 'smooth', inline:'center', block:'nearest'});
+}
+/* Click the dark surround to close, but not the image, the arrows, the thumbs, or the caption. */
+if(LB) LB.addEventListener('click', e => {
+  if(e.target === LB || e.target.id === 'lb-main') closeLb();
+});
+/* Keyboard: Esc closes, arrows navigate, Tab is trapped within the dialog. */
+document.addEventListener('keydown', e => {
+  if(!LB || !LB.classList.contains('open')) return;
+  if(e.key === 'Escape'){ closeLb(); return; }
+  if(e.key === 'ArrowLeft'){ lbNav(-1); return; }
+  if(e.key === 'ArrowRight'){ lbNav(1); return; }
+  if(e.key === 'Tab'){
+    const f = LB.querySelectorAll('button');
+    if(!f.length) return;
+    const first = f[0], last = f[f.length-1];
+    if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+  }
+});
+/* Swipe left and right on touch. Horizontal intent only, so vertical scrolls are ignored. */
+(function(){
+  const main = document.getElementById('lb-main');
+  if(!main) return;
+  let x0=null,y0=null;
+  main.addEventListener('touchstart', e => { const t=e.changedTouches[0]; x0=t.clientX; y0=t.clientY; }, {passive:true});
+  main.addEventListener('touchend', e => {
+    if(x0===null) return;
+    const t=e.changedTouches[0];
+    const dx=t.clientX-x0, dy=t.clientY-y0;
+    if(Math.abs(dx)>50 && Math.abs(dx)>Math.abs(dy)*1.5){ lbNav(dx<0 ? 1 : -1); }
+    x0=y0=null;
+  }, {passive:true});
+})();
+
+function showSpace(idx, el){
+  document.querySelectorAll('.s-tab').forEach((t,i) => t.classList.toggle('active', i === idx));
+  document.querySelectorAll('.s-panel').forEach((p,i) => p.classList.toggle('active', i === idx));
+}
+
+/* Reveal on scroll. If IntersectionObserver is missing or throws, show everything so the page is never stuck hidden. */
+(function(){
+  const items = document.querySelectorAll('.reveal');
+  function showAll(){ items.forEach(el => el.classList.add('visible')); }
+  if('IntersectionObserver' in window){
+    try{
+      const obs = new IntersectionObserver(entries => {
+        entries.forEach(e => { if(e.isIntersecting){ e.target.classList.add('visible'); obs.unobserve(e.target); } });
+      }, {threshold: 0.08});
+      items.forEach(el => obs.observe(el));
+    }catch(err){ showAll(); }
+  } else { showAll(); }
+  const fy = document.getElementById('footYear');
+  if(fy) fy.textContent = new Date().getFullYear();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Aetheria — Milestone 3: World, NPCs &amp; Quests</title>
+<!--
+  ============================================================================
+  AETHERIA  —  A high-fantasy, first-person open-world action RPG
+  ----------------------------------------------------------------------------
+  MILESTONE 3 : World, NPCs and Quests  (builds on Milestones 1 & 2)
+    * Interactive quest-giver NPC (Aldric the Watchman) who issues a
+      RADIANT "Kill the Bandit" quest — target name, location and reward
+      are procedurally generated each time and it can be repeated.
+    * Quest system + Journal (J) and a live quest tracker (title, objective
+      progress, distance & compass bearing to the target) plus rewards/gold.
+    * Bandit enemy AI with a patrol -> chase -> attack state machine that
+      deals damage to the player (respecting blocking) and dies to the
+      player's melee / fireballs, advancing the quest.
+
+  Damage resolution from Milestone 2 was refactored into a shared ENTITIES
+  registry so melee swings, fireball splash, training dummies and living
+  bandits all interoperate through one code path.
+
+  TECH STACK : HTML5 + CSS3 + JavaScript (ES Modules) + Three.js (WebGL)
+  ASSETS     : 100% procedural — no external meshes, textures or audio.
+
+  DETERMINISM / SERVER-AUTHORITY READINESS
+  ----------------------------------------
+  All gameplay simulation (movement, vitals, attacks, projectiles, enemy AI,
+  quest progress) advances on a FIXED TIMESTEP. Rendering only reads state.
+  This is the frame-rate-independent core a server would run authoritatively.
+  ============================================================================
+-->
+<style>
+  :root {
+    --hud-fg: #e9e0c8; --hud-accent: #c9a227;
+    --panel-bg: rgba(18, 16, 12, 0.92); --panel-border: #5a4a24;
+    --hp: #b23b3b; --sp: #4c9a4c; --mp: #3f6fb2;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden; background: #0a0d12; color: var(--hud-fg);
+    font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif; cursor: default; user-select: none;
+  }
+  #game-canvas { display: block; width: 100vw; height: 100vh; }
+
+  /* Crosshair + hit marker */
+  #crosshair { position: fixed; top: 50%; left: 50%; width: 18px; height: 18px;
+    transform: translate(-50%, -50%); pointer-events: none; opacity: 0.7; z-index: 10; }
+  #crosshair::before, #crosshair::after { content: ""; position: absolute; background: var(--hud-fg); }
+  #crosshair::before { left: 50%; top: 0; width: 2px; height: 100%; transform: translateX(-50%); }
+  #crosshair::after  { top: 50%; left: 0; height: 2px; width: 100%; transform: translateY(-50%); }
+  #hitmarker { position: fixed; top: 50%; left: 50%; width: 26px; height: 26px;
+    transform: translate(-50%, -50%) rotate(45deg); pointer-events: none; z-index: 11; opacity: 0; }
+  #hitmarker::before, #hitmarker::after { content: ""; position: absolute; background: #ffdca0; }
+  #hitmarker::before { left: 50%; top: 0; width: 3px; height: 100%; transform: translateX(-50%); }
+  #hitmarker::after  { top: 50%; left: 0; height: 3px; width: 100%; transform: translateY(-50%); }
+  #hitmarker.show { animation: hm 0.22s ease-out; }
+  @keyframes hm { 0% { opacity: 1; transform: translate(-50%,-50%) rotate(45deg) scale(0.6);} 100% { opacity: 0; transform: translate(-50%,-50%) rotate(45deg) scale(1.3);} }
+
+  /* Vitals */
+  #vitals { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+    display: flex; flex-direction: column; gap: 6px; z-index: 10; pointer-events: none; width: min(420px, 70vw); }
+  .bar { position: relative; height: 14px; background: rgba(0,0,0,0.55); border: 1px solid #000;
+    border-radius: 7px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.6); }
+  .bar .fill { position: absolute; inset: 0; transform-origin: left center; transition: transform 0.12s linear; }
+  .bar .txt { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 10px; letter-spacing: 1px; text-shadow: 0 1px 2px #000; }
+  #bar-hp .fill { background: linear-gradient(#d15555, var(--hp)); }
+  #bar-sp .fill { background: linear-gradient(#6fca6f, var(--sp)); }
+  #bar-mp .fill { background: linear-gradient(#5f96d6, var(--mp)); }
+  #bar-mp { height: 11px; }
+
+  /* Top-left info (altitude/fps/gold) */
+  #hud { position: fixed; left: 16px; top: 14px; font-size: 12px; line-height: 1.6;
+    text-shadow: 0 1px 3px #000; pointer-events: none; z-index: 10; opacity: 0.9; }
+  #hud .stat { color: var(--hud-accent); font-weight: bold; }
+  #gold { color: var(--hud-accent); font-weight: bold; font-size: 14px; }
+
+  /* Quest tracker (top-right) */
+  #quest-tracker { position: fixed; right: 16px; top: 14px; width: min(280px, 42vw);
+    text-align: right; z-index: 10; pointer-events: none; text-shadow: 0 1px 3px #000; display: none; }
+  #quest-tracker.show { display: block; }
+  #quest-tracker .qt-title { color: var(--hud-accent); font-size: 14px; letter-spacing: 1px; }
+  #quest-tracker .qt-obj { font-size: 12px; opacity: 0.9; margin-top: 2px; }
+  #quest-tracker .qt-nav { font-size: 12px; color: #cfe0ff; margin-top: 2px; }
+  #quest-tracker .qt-done { color: #8fdf8f; }
+
+  /* NPC interaction prompt (bottom-center, above vitals) */
+  #dialogue { position: fixed; left: 50%; bottom: 92px; transform: translateX(-50%);
+    max-width: 620px; text-align: center; z-index: 12; pointer-events: none; display: none; }
+  #dialogue.show { display: block; }
+  #dialogue .name { color: var(--hud-accent); font-size: 15px; letter-spacing: 1px; }
+  #dialogue .line { font-size: 13px; opacity: 0.92; margin-top: 3px; text-shadow: 0 1px 3px #000; }
+  #dialogue .act { margin-top: 6px; font-size: 13px; }
+  #dialogue .act b { color: #fff; background: rgba(90,74,36,0.7); padding: 2px 8px; border-radius: 4px; }
+
+  /* Toast (transient events) */
+  #toast { position: fixed; left: 50%; top: 64px; transform: translateX(-50%);
+    background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 5px;
+    padding: 9px 18px; font-size: 13px; z-index: 13; opacity: 0; transition: opacity 0.3s;
+    pointer-events: none; text-align: center; max-width: 80vw; }
+  #toast.show { opacity: 1; }
+
+  /* Overlay */
+  #overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; text-align: center;
+    background: radial-gradient(ellipse at center, rgba(10,13,18,0.72), rgba(4,5,8,0.96));
+    z-index: 20; transition: opacity 0.4s ease; }
+  #overlay.hidden { opacity: 0; pointer-events: none; }
+  #overlay h1 { font-size: 44px; letter-spacing: 4px; color: var(--hud-accent); text-shadow: 0 2px 12px #000; margin-bottom: 8px; }
+  #overlay .sub { font-size: 15px; opacity: 0.8; margin-bottom: 24px; letter-spacing: 1px; }
+  #overlay .keys { font-size: 13px; opacity: 0.75; line-height: 2.0; }
+  #overlay .keys b { color: var(--hud-fg); }
+  #overlay .cta { margin-top: 24px; padding: 12px 28px; border: 1px solid var(--panel-border);
+    background: var(--panel-bg); color: var(--hud-fg); border-radius: 4px; font-size: 15px;
+    letter-spacing: 2px; cursor: pointer; pointer-events: auto; }
+  #overlay .cta:hover { border-color: var(--hud-accent); color: var(--hud-accent); }
+
+  /* Modal panels (inventory + journal) */
+  .modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+    background: rgba(4, 5, 8, 0.55); z-index: 15; }
+  .modal.open { display: flex; }
+  .modal .panel { width: min(680px, 90vw); background: var(--panel-bg); border: 1px solid var(--panel-border);
+    border-radius: 6px; padding: 22px 24px; box-shadow: 0 12px 48px rgba(0,0,0,0.6); }
+  .modal h2 { color: var(--hud-accent); letter-spacing: 3px; font-size: 20px; margin-bottom: 4px; }
+  .modal .hint { font-size: 12px; opacity: 0.6; margin-bottom: 16px; }
+  #inv-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  .inv-slot { aspect-ratio: 1 / 1; border: 1px solid #3a3018; border-radius: 4px;
+    background: rgba(40, 34, 20, 0.5); display: flex; flex-direction: column; align-items: center;
+    justify-content: center; font-size: 22px; position: relative; }
+  .inv-slot.empty { color: #4a4230; font-size: 12px; }
+  .inv-slot .label { position: absolute; bottom: 3px; font-size: 9px; opacity: 0.65; }
+  .inv-slot .qty { position: absolute; top: 3px; right: 5px; font-size: 10px; color: var(--hud-accent); }
+
+  /* Journal entries */
+  #journal-list { display: flex; flex-direction: column; gap: 12px; }
+  .quest-entry { border: 1px solid #3a3018; border-radius: 5px; padding: 12px 14px; background: rgba(40,34,20,0.4); }
+  .quest-entry .qe-title { color: var(--hud-accent); font-size: 15px; }
+  .quest-entry .qe-desc { font-size: 12px; opacity: 0.85; margin-top: 4px; line-height: 1.5; }
+  .quest-entry .qe-obj { font-size: 12px; margin-top: 6px; }
+  .quest-entry .qe-obj.done { color: #8fdf8f; }
+  .quest-entry .qe-reward { font-size: 11px; opacity: 0.7; margin-top: 4px; }
+  .journal-empty { opacity: 0.6; font-size: 13px; }
+  #journal-summary { font-size: 12px; opacity: 0.75; margin-bottom: 14px; }
+
+  /* Fatal + damage flash */
+  #fatal { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center;
+    justify-content: center; text-align: center; padding: 40px; background: #12080a; color: #f0c9c9;
+    z-index: 100; font-size: 15px; line-height: 1.6; }
+  #fatal h2 { color: #e06666; margin-bottom: 12px; letter-spacing: 2px; }
+  #fatal code { display: block; margin-top: 14px; opacity: 0.7; font-size: 12px; }
+  #damage-flash { position: fixed; inset: 0; pointer-events: none; z-index: 12;
+    box-shadow: inset 0 0 160px rgba(160,20,20,0); transition: box-shadow 0.15s; }
+  #damage-flash.hit { box-shadow: inset 0 0 160px rgba(160,20,20,0.7); }
+</style>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+
+  <div id="crosshair"></div>
+  <div id="hitmarker"></div>
+  <div id="damage-flash"></div>
+
+  <div id="vitals">
+    <div class="bar" id="bar-hp"><div class="fill"></div><div class="txt" id="txt-hp">HEALTH</div></div>
+    <div class="bar" id="bar-sp"><div class="fill"></div><div class="txt" id="txt-sp">STAMINA</div></div>
+    <div class="bar" id="bar-mp"><div class="fill"></div><div class="txt" id="txt-mp">MAGICKA</div></div>
+  </div>
+
+  <div id="hud">
+    <div>💰 <span id="gold">0</span> gold</div>
+    <div>Altitude: <span class="stat" id="hud-alt">–</span>m · FPS: <span class="stat" id="hud-fps">–</span></div>
+    <div style="opacity:0.7; margin-top:2px;">LMB Light · Hold-LMB Heavy · RMB Block · F Fireball · E Talk · J Journal · I Inventory</div>
+  </div>
+
+  <div id="quest-tracker">
+    <div class="qt-title" id="qt-title"></div>
+    <div class="qt-obj" id="qt-obj"></div>
+    <div class="qt-nav" id="qt-nav"></div>
+  </div>
+
+  <div id="dialogue">
+    <div class="name" id="dlg-name"></div>
+    <div class="line" id="dlg-line"></div>
+    <div class="act" id="dlg-act"></div>
+  </div>
+
+  <div id="toast"></div>
+
+  <!-- Inventory modal -->
+  <div id="inventory" class="modal">
+    <div class="panel">
+      <h2>INVENTORY</h2>
+      <div class="hint">Placeholder loadout. Press [I] or [ESC] to close.</div>
+      <div id="inv-grid"></div>
+    </div>
+  </div>
+
+  <!-- Journal modal -->
+  <div id="journal" class="modal">
+    <div class="panel">
+      <h2>QUEST JOURNAL</h2>
+      <div class="hint">Press [J] or [ESC] to close.</div>
+      <div id="journal-summary"></div>
+      <div id="journal-list"></div>
+    </div>
+  </div>
+
+  <div id="overlay">
+    <h1>AETHERIA</h1>
+    <div class="sub">Milestone 3 — World, NPCs &amp; Quests</div>
+    <div class="keys">
+      <b>W A S D</b> Move · <b>Mouse</b> Look · <b>Space</b> Jump · <b>Shift</b> Sprint<br />
+      <b>Left-Click</b> Light · <b>Hold Left-Click</b> Heavy · <b>Right-Click</b> Block · <b>F</b> Fireball<br />
+      <b>E</b> Talk / Interact · <b>J</b> Journal · <b>I</b> Inventory · <b>Esc</b> Release cursor<br />
+      <span style="opacity:0.6">Speak with Aldric ahead of you to take a bounty on a bandit.</span>
+    </div>
+    <button class="cta" id="start-btn">CLICK TO ENTER THE WORLD</button>
+  </div>
+
+  <div id="fatal">
+    <h2>THE REALM FAILED TO LOAD</h2>
+    <div id="fatal-msg">An unexpected error occurred.</div>
+    <code id="fatal-detail"></code>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+  "use strict";
+
+  /* ==========================================================================
+     0. GLOBAL ERROR HANDLING
+     ========================================================================== */
+  function showFatal(message, detail) {
+    const el = document.getElementById("fatal");
+    document.getElementById("fatal-msg").textContent = message;
+    document.getElementById("fatal-detail").textContent = detail || "";
+    if (el) el.style.display = "flex";
+    console.error("[Aetheria:FATAL]", message, detail || "");
+  }
+  window.addEventListener("error", (e) =>
+    showFatal("A runtime error stopped the game.", e.message + " @ " + (e.filename || "") + ":" + (e.lineno || "")));
+  window.addEventListener("unhandledrejection", (e) =>
+    showFatal("A module or async task failed.", (e.reason && e.reason.message) || String(e.reason)));
+
+  let THREE, PointerLockControls;
+  try {
+    THREE = await import("three");
+    ({ PointerLockControls } = await import("three/addons/controls/PointerLockControls.js"));
+  } catch (err) {
+    showFatal("Could not load the Three.js engine from the CDN. Check your network connection.", String(err));
+    throw err;
+  }
+
+  /* ==========================================================================
+     1. CONFIGURATION
+     ========================================================================== */
+  const CONFIG = Object.freeze({
+    FIXED_DT: 1 / 60, MAX_FRAME_DT: 0.25,
+    WORLD_SIZE: 1000, TERRAIN_SEGMENTS: 200, SEED: 1337,
+    MOUNTAIN_HEIGHT: 120, FOG_NEAR: 120, FOG_FAR: 780,
+    EYE_HEIGHT: 1.7, WALK_SPEED: 7.0, SPRINT_SPEED: 12.0,
+    ACCEL: 60.0, FRICTION: 10.0, GRAVITY: 24.0, JUMP_SPEED: 8.5, AIR_CONTROL: 0.25,
+    MOUSE_SENSITIVITY: 0.0022, PITCH_LIMIT: Math.PI / 2 - 0.05, FOV: 75,
+
+    // Vitals
+    MAX_HEALTH: 100, MAX_STAMINA: 100, MAX_MAGICKA: 100,
+    STAMINA_REGEN: 18, STAMINA_REGEN_DELAY: 0.8, MAGICKA_REGEN: 12,
+    SPRINT_STAMINA_COST: 12, HEALTH_REGEN: 2.5, HEALTH_REGEN_DELAY: 4.0,
+
+    // Combat
+    LIGHT_DAMAGE: 14, LIGHT_STAMINA: 12, LIGHT_DURATION: 0.42, LIGHT_HITFRAME: 0.18,
+    HEAVY_DAMAGE: 34, HEAVY_STAMINA: 28, HEAVY_DURATION: 0.72, HEAVY_HITFRAME: 0.34,
+    HEAVY_CHARGE_TIME: 0.28,
+    MELEE_RANGE: 3.2, MELEE_ARC: Math.cos(Math.PI / 3.2),
+    BLOCK_STAMINA_DRAIN: 8, BLOCK_DAMAGE_REDUCTION: 0.8,
+
+    // Magic
+    FIREBALL_COST: 22, FIREBALL_SPEED: 42, FIREBALL_DAMAGE: 40,
+    FIREBALL_RADIUS: 0.35, FIREBALL_LIFETIME: 3.0, FIREBALL_SPLASH: 3.5, FIREBALL_COOLDOWN: 0.45,
+
+    // Fall damage
+    FALL_SAFE_SPEED: 14, FALL_DAMAGE_SCALE: 6,
+
+    // Training dummies
+    DUMMY_HEALTH: 100, DUMMY_RESPAWN: 5.0,
+
+    // --- NPC / Quests (Milestone 3) ---
+    NPC_TALK_RANGE: 4.0,
+    QUEST_MIN_DIST: 34, QUEST_MAX_DIST: 68,   // radiant bandit spawn distance from town
+    QUEST_REWARD_MIN: 40, QUEST_REWARD_MAX: 100,
+
+    // --- Bandit AI (Milestone 3) ---
+    BANDIT_HEALTH: 90,
+    BANDIT_PATROL_SPEED: 2.4, BANDIT_CHASE_SPEED: 5.6,
+    BANDIT_PATROL_RADIUS: 10,
+    BANDIT_DETECT: 20, BANDIT_LEASH: 34,
+    BANDIT_ATTACK_RANGE: 2.4,
+    BANDIT_ATTACK_WINDUP: 0.45, BANDIT_ATTACK_RECOVER: 0.35,
+    BANDIT_ATTACK_COOLDOWN: 1.1, BANDIT_ATTACK_DAMAGE: 12,
+  });
+
+  /* ==========================================================================
+     2. DETERMINISTIC NOISE  (Noise.rand is a seeded PRNG for gameplay rolls)
+     ========================================================================== */
+  const Noise = (() => {
+    function mulberry32(a) {
+      return function () {
+        a |= 0; a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    const rng = mulberry32(CONFIG.SEED);
+    const perm = new Uint8Array(512), p = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) p[i] = i;
+    for (let i = 255; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [p[i], p[j]] = [p[j], p[i]]; }
+    for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
+    const fade = (t) => t * t * t * (t * (t * 6 - 15) + 10);
+    const lerp = (a, b, t) => a + t * (b - a);
+    const hash = (x, y) => perm[(perm[x & 255] + y) & 255] / 255 * 2 - 1;
+    function valueNoise(x, y) {
+      const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+      const u = fade(xf), v = fade(yf);
+      return lerp(lerp(hash(xi, yi), hash(xi + 1, yi), u), lerp(hash(xi, yi + 1), hash(xi + 1, yi + 1), u), v);
+    }
+    function fbm(x, y, octaves = 5, lacunarity = 2.0, gain = 0.5) {
+      let amp = 1, freq = 1, sum = 0, norm = 0;
+      for (let o = 0; o < octaves; o++) { sum += amp * valueNoise(x * freq, y * freq); norm += amp; amp *= gain; freq *= lacunarity; }
+      return sum / norm;
+    }
+    return { fbm, rand: mulberry32(CONFIG.SEED + 99) };
+  })();
+
+  /* ==========================================================================
+     3. TERRAIN
+     ========================================================================== */
+  const Terrain = (() => {
+    const HALF = CONFIG.WORLD_SIZE / 2, NOISE_SCALE = 0.0016;
+    function heightAt(x, z) {
+      let h = Noise.fbm(x * NOISE_SCALE, z * NOISE_SCALE, 5);
+      const dist = Math.sqrt(x * x + z * z) / HALF;
+      const mountainMask = Math.min(1, Math.max(0, (dist - 0.25) / 0.75));
+      const ridged = Math.pow(Math.abs(h), 0.8);
+      return h * 6.0 + ridged * CONFIG.MOUNTAIN_HEIGHT * mountainMask * mountainMask;
+    }
+    function build() {
+      const seg = CONFIG.TERRAIN_SEGMENTS;
+      const geo = new THREE.PlaneGeometry(CONFIG.WORLD_SIZE, CONFIG.WORLD_SIZE, seg, seg);
+      geo.rotateX(-Math.PI / 2);
+      const pos = geo.attributes.position, colors = new Float32Array(pos.count * 3);
+      const cGrass = new THREE.Color(0x4b6b32), cRock = new THREE.Color(0x6d635a),
+            cSnow = new THREE.Color(0xeef2f5), cDirt = new THREE.Color(0x5c4a30), tmp = new THREE.Color();
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i), z = pos.getZ(i), y = heightAt(x, z);
+        pos.setY(i, y);
+        const t = THREE.MathUtils.clamp(y / CONFIG.MOUNTAIN_HEIGHT, 0, 1);
+        if (t < 0.05)      tmp.copy(cDirt).lerp(cGrass, t / 0.05);
+        else if (t < 0.45) tmp.copy(cGrass).lerp(cRock, (t - 0.05) / 0.40);
+        else               tmp.copy(cRock).lerp(cSnow, (t - 0.45) / 0.55);
+        colors[i * 3] = tmp.r; colors[i * 3 + 1] = tmp.g; colors[i * 3 + 2] = tmp.b;
+      }
+      geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      geo.computeVertexNormals();
+      const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+      mesh.name = "terrain";
+      return mesh;
+    }
+    return { build, heightAt, HALF };
+  })();
+
+  /* ==========================================================================
+     4. INPUT MANAGER  (adds Interact [E] and Journal [J])
+     ========================================================================== */
+  const Input = (() => {
+    const keys = Object.create(null);
+    const state = { forward: 0, right: 0, jump: false, sprint: false,
+      lmbDown: false, lmbReleaseQueued: false, blocking: false, castQueued: false };
+    const MAP = {
+      KeyW: "up", ArrowUp: "up", KeyS: "down", ArrowDown: "down",
+      KeyA: "left", ArrowLeft: "left", KeyD: "right", ArrowRight: "right",
+      Space: "jump", ShiftLeft: "sprint", ShiftRight: "sprint",
+    };
+    function refresh() {
+      state.forward = (keys.up ? 1 : 0) - (keys.down ? 1 : 0);
+      state.right   = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+      state.jump = !!keys.jump; state.sprint = !!keys.sprint;
+    }
+    window.addEventListener("keydown", (e) => {
+      const a = MAP[e.code];
+      if (a) { keys[a] = true; e.preventDefault(); refresh(); }
+      if (e.code === "KeyI") UI.toggleInventory();
+      if (e.code === "KeyJ") UI.toggleJournal();
+      if (e.code === "KeyF") state.castQueued = true;
+      if (e.code === "KeyE") NPC.tryInteract();
+    });
+    window.addEventListener("keyup", (e) => {
+      const a = MAP[e.code];
+      if (a) { keys[a] = false; e.preventDefault(); refresh(); }
+    });
+    function reset() { for (const k in keys) keys[k] = false; refresh();
+      state.lmbDown = false; state.lmbReleaseQueued = false; state.blocking = false; state.castQueued = false; }
+    return { state, reset };
+  })();
+
+  /* ==========================================================================
+     5. VITALS
+     ========================================================================== */
+  const Vitals = (() => {
+    const state = { health: CONFIG.MAX_HEALTH, stamina: CONFIG.MAX_STAMINA, magicka: CONFIG.MAX_MAGICKA,
+      staminaLock: 0, magickaLock: 0, healthLock: 0, dead: false };
+    function spendStamina(amount) {
+      if (state.stamina < amount) return false;
+      state.stamina -= amount; state.staminaLock = CONFIG.STAMINA_REGEN_DELAY; return true;
+    }
+    function spendMagicka(amount) {
+      if (state.magicka < amount) return false;
+      state.magicka -= amount; state.magickaLock = CONFIG.STAMINA_REGEN_DELAY; return true;
+    }
+    function damage(amount) {
+      if (state.dead) return;
+      state.health = Math.max(0, state.health - amount);
+      state.healthLock = CONFIG.HEALTH_REGEN_DELAY; UI.flashDamage();
+      if (state.health <= 0) { state.dead = true; UI.onPlayerDeath(); }
+    }
+    function step(dt, movingSprint) {
+      if (movingSprint && state.stamina > 0) {
+        state.stamina = Math.max(0, state.stamina - CONFIG.SPRINT_STAMINA_COST * dt);
+        state.staminaLock = CONFIG.STAMINA_REGEN_DELAY;
+      }
+      state.staminaLock = Math.max(0, state.staminaLock - dt);
+      state.magickaLock = Math.max(0, state.magickaLock - dt);
+      state.healthLock  = Math.max(0, state.healthLock - dt);
+      if (state.staminaLock === 0) state.stamina = Math.min(CONFIG.MAX_STAMINA, state.stamina + CONFIG.STAMINA_REGEN * dt);
+      if (state.magickaLock === 0) state.magicka = Math.min(CONFIG.MAX_MAGICKA, state.magicka + CONFIG.MAGICKA_REGEN * dt);
+      if (state.healthLock === 0 && !state.dead) state.health = Math.min(CONFIG.MAX_HEALTH, state.health + CONFIG.HEALTH_REGEN * dt);
+    }
+    function respawn() { state.health = CONFIG.MAX_HEALTH; state.stamina = CONFIG.MAX_STAMINA; state.magicka = CONFIG.MAX_MAGICKA; state.dead = false; }
+    return { state, spendStamina, spendMagicka, damage, step, respawn };
+  })();
+
+  /* ==========================================================================
+     6. ENTITIES REGISTRY  (shared damageable targets)
+     Every hittable thing (training dummy, bandit) registers here and exposes:
+       { pos: Vector3(feet), alive: bool, onHit(dmg), update(dt) }
+     Melee, splash and projectile-contact all resolve against this one list,
+     so combat code never needs to know *what kind* of thing it is hitting.
+     ========================================================================== */
+  const Entities = (() => {
+    const list = [];
+    const _d = new THREE.Vector3();
+    function register(e) { list.push(e); }
+    function clear() { list.length = 0; }
+
+    /** Damage the nearest living entity inside melee range and swing arc. */
+    function resolveMelee(playerPos, forward, damage) {
+      let fx = forward.x, fz = forward.z; const fl = Math.hypot(fx, fz) || 1; fx /= fl; fz /= fl;
+      let best = null, bestDist = Infinity;
+      for (const e of list) {
+        if (!e.alive) continue;
+        const dx = e.pos.x - playerPos.x, dz = e.pos.z - playerPos.z;
+        const dist = Math.hypot(dx, dz);
+        if (dist > CONFIG.MELEE_RANGE || dist === 0) continue;
+        const facing = (dx / dist) * fx + (dz / dist) * fz;
+        if (facing < CONFIG.MELEE_ARC) continue;
+        if (dist < bestDist) { bestDist = dist; best = e; }
+      }
+      if (best) { best.onHit(damage); UI.showHit(); }
+    }
+    /** Radial splash damage (fireball detonation). */
+    function resolveSplash(pos, radius, damage) {
+      let any = false;
+      for (const e of list) {
+        if (!e.alive) continue;
+        const dist = Math.hypot(e.pos.x - pos.x, e.pos.z - pos.z);
+        if (dist <= radius) { e.onHit(damage * (1 - dist / radius * 0.6)); any = true; }
+      }
+      if (any) UI.showHit();
+    }
+    /** Direct-contact test used by projectiles in flight. */
+    function hitAny(pos, radius) {
+      for (const e of list) {
+        if (!e.alive) continue;
+        const dx = e.pos.x - pos.x, dz = e.pos.z - pos.z, dy = (e.pos.y + 1.0) - pos.y;
+        if (dx * dx + dz * dz + dy * dy <= radius * radius) return true;
+      }
+      return false;
+    }
+    function step(dt) { for (const e of list) e.update(dt); }
+    return { register, clear, resolveMelee, resolveSplash, hitAny, step };
+  })();
+
+  /* ==========================================================================
+     7. PLAYER  (decoupled camera rig + physics + combat state machine)
+     ========================================================================== */
+  const Player = (() => {
+    const camera = new THREE.PerspectiveCamera(CONFIG.FOV, innerWidth / innerHeight, 0.1, 2000);
+    const pitchObject = new THREE.Object3D(), yawObject = new THREE.Object3D();
+    pitchObject.add(camera); yawObject.add(pitchObject);
+
+    const state = {
+      position: new THREE.Vector3(0, 0, 0), velocity: new THREE.Vector3(0, 0, 0),
+      yaw: 0, pitch: 0, onGround: false, prevVelY: 0,
+      attackState: "idle", attackKind: "light", attackTimer: 0, attackHitDone: false,
+      chargeTime: 0, attackCooldown: 0, castCooldown: 0, blocking: false,
+    };
+    const _wish = new THREE.Vector3(), _fwd = new THREE.Vector3(), _right = new THREE.Vector3();
+
+    function spawn(x, z) {
+      state.position.set(x, Terrain.heightAt(x, z) + CONFIG.EYE_HEIGHT, z);
+      state.velocity.set(0, 0, 0); state.onGround = true; state.attackState = "idle"; state.blocking = false;
+    }
+    function look(dx, dy) {
+      state.yaw -= dx * CONFIG.MOUSE_SENSITIVITY;
+      state.pitch = THREE.MathUtils.clamp(state.pitch - dy * CONFIG.MOUSE_SENSITIVITY, -CONFIG.PITCH_LIMIT, CONFIG.PITCH_LIMIT);
+    }
+    function forwardDir(out) {
+      const cp = Math.cos(state.pitch);
+      return out.set(-Math.sin(state.yaw) * cp, Math.sin(state.pitch), -Math.cos(state.yaw) * cp).normalize();
+    }
+    function handOrigin(out) {
+      forwardDir(out);
+      return out.multiplyScalar(0.6).add(state.position).add(new THREE.Vector3(0, -0.25, 0));
+    }
+
+    function step(dt, input) {
+      if (Vitals.state.dead) return;
+
+      // Movement
+      _fwd.set(-Math.sin(state.yaw), 0, -Math.cos(state.yaw));
+      _right.set(Math.cos(state.yaw), 0, -Math.sin(state.yaw));
+      _wish.set(0, 0, 0).addScaledVector(_fwd, input.forward).addScaledVector(_right, input.right);
+      if (_wish.lengthSq() > 0) _wish.normalize();
+
+      const moving = _wish.lengthSq() > 0;
+      const wantSprint = input.sprint && moving && Vitals.state.stamina > 1 && !state.blocking;
+      const targetSpeed = wantSprint ? CONFIG.SPRINT_SPEED : state.blocking ? CONFIG.WALK_SPEED * 0.5 : CONFIG.WALK_SPEED;
+      const control = state.onGround ? 1 : CONFIG.AIR_CONTROL;
+
+      const vh = new THREE.Vector3(state.velocity.x, 0, state.velocity.z);
+      if (state.onGround) {
+        const speed = vh.length();
+        if (speed > 0) { const drop = speed * CONFIG.FRICTION * dt; vh.multiplyScalar(Math.max(speed - drop, 0) / speed); }
+      }
+      vh.addScaledVector(_wish, CONFIG.ACCEL * control * dt);
+      if (vh.length() > targetSpeed) vh.setLength(targetSpeed);
+      state.velocity.x = vh.x; state.velocity.z = vh.z;
+
+      state.prevVelY = state.velocity.y;
+      state.velocity.y -= CONFIG.GRAVITY * dt;
+      if (input.jump && state.onGround && Vitals.spendStamina(10)) { state.velocity.y = CONFIG.JUMP_SPEED; state.onGround = false; }
+      state.position.addScaledVector(state.velocity, dt);
+
+      // Ground + fall damage
+      const groundY = Terrain.heightAt(state.position.x, state.position.z) + CONFIG.EYE_HEIGHT;
+      const wasAir = !state.onGround;
+      if (state.position.y <= groundY) {
+        state.position.y = groundY;
+        if (wasAir) {
+          const impact = -state.prevVelY;
+          if (impact > CONFIG.FALL_SAFE_SPEED) Vitals.damage((impact - CONFIG.FALL_SAFE_SPEED) * CONFIG.FALL_DAMAGE_SCALE);
+        }
+        if (state.velocity.y < 0) state.velocity.y = 0;
+        state.onGround = true;
+      } else state.onGround = false;
+
+      const lim = Terrain.HALF - 2;
+      state.position.x = THREE.MathUtils.clamp(state.position.x, -lim, lim);
+      state.position.z = THREE.MathUtils.clamp(state.position.z, -lim, lim);
+
+      Vitals.step(dt, wantSprint);
+
+      // Combat state machine
+      state.attackCooldown = Math.max(0, state.attackCooldown - dt);
+      state.castCooldown = Math.max(0, state.castCooldown - dt);
+      state.blocking = input.blocking && state.attackState === "idle";
+      if (state.blocking && !Vitals.spendStamina(CONFIG.BLOCK_STAMINA_DRAIN * dt)) state.blocking = false;
+
+      if (input.lmbDown && state.attackState === "idle" && !state.blocking) state.chargeTime += dt;
+
+      if (input.lmbReleaseQueued) {
+        input.lmbReleaseQueued = false;
+        if (state.attackState === "idle" && state.attackCooldown === 0 && !state.blocking) {
+          const heavy = state.chargeTime >= CONFIG.HEAVY_CHARGE_TIME;
+          const cost = heavy ? CONFIG.HEAVY_STAMINA : CONFIG.LIGHT_STAMINA;
+          if (Vitals.spendStamina(cost)) {
+            state.attackKind = heavy ? "heavy" : "light";
+            state.attackState = "swing"; state.attackTimer = 0; state.attackHitDone = false;
+          }
+        }
+        state.chargeTime = 0;
+      }
+
+      if (state.attackState === "swing") {
+        state.attackTimer += dt;
+        const dur = state.attackKind === "heavy" ? CONFIG.HEAVY_DURATION : CONFIG.LIGHT_DURATION;
+        const hitFrame = state.attackKind === "heavy" ? CONFIG.HEAVY_HITFRAME : CONFIG.LIGHT_HITFRAME;
+        const dmg = state.attackKind === "heavy" ? CONFIG.HEAVY_DAMAGE : CONFIG.LIGHT_DAMAGE;
+        if (!state.attackHitDone && state.attackTimer >= hitFrame) {
+          state.attackHitDone = true;
+          Entities.resolveMelee(state.position, forwardDir(new THREE.Vector3()), dmg);
+        }
+        if (state.attackTimer >= dur) { state.attackState = "idle"; state.attackCooldown = 0.08; }
+      }
+
+      // Spellcasting
+      if (input.castQueued) {
+        input.castQueued = false;
+        if (state.castCooldown === 0 && state.attackState === "idle" && Vitals.spendMagicka(CONFIG.FIREBALL_COST)) {
+          Projectiles.spawnFireball(handOrigin(new THREE.Vector3()), forwardDir(new THREE.Vector3()));
+          state.castCooldown = CONFIG.FIREBALL_COOLDOWN;
+        }
+      }
+    }
+
+    function syncToRig() {
+      yawObject.position.copy(state.position);
+      yawObject.rotation.y = state.yaw; pitchObject.rotation.x = state.pitch;
+    }
+    function onResize() { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+    return { camera, rig: yawObject, state, spawn, look, step, syncToRig, onResize, forwardDir, handOrigin };
+  })();
+
+  /* ==========================================================================
+     8. VIEWMODEL  (procedural first-person sword + casting hand)
+     ========================================================================== */
+  const Viewmodel = (() => {
+    const group = new THREE.Group();
+    let sword, handGlow;
+    function build(camera) {
+      sword = new THREE.Group();
+      const blade = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.9, 0.12),
+        new THREE.MeshStandardMaterial({ color: 0xcfd4dc, metalness: 0.9, roughness: 0.3 }));
+      blade.position.y = 0.55;
+      const guard = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.06, 0.08),
+        new THREE.MeshStandardMaterial({ color: 0x8a6a2a, metalness: 0.7, roughness: 0.4 }));
+      const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.26, 8),
+        new THREE.MeshStandardMaterial({ color: 0x3a2a18 }));
+      grip.position.y = -0.15;
+      sword.add(blade, guard, grip);
+      sword.position.set(0.32, -0.34, -0.62); sword.rotation.set(0.2, -0.15, 0.1);
+
+      const hand = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 10),
+        new THREE.MeshStandardMaterial({ color: 0xd8b98a, roughness: 0.8 }));
+      hand.position.set(-0.34, -0.36, -0.55);
+      handGlow = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10),
+        new THREE.MeshBasicMaterial({ color: 0xff7b2e, transparent: true, opacity: 0 }));
+      handGlow.position.copy(hand.position);
+      group.add(sword, hand, handGlow);
+      camera.add(group);
+    }
+    function update() {
+      const s = Player.state;
+      let swing = 0;
+      if (s.attackState === "swing") {
+        const dur = s.attackKind === "heavy" ? CONFIG.HEAVY_DURATION : CONFIG.LIGHT_DURATION;
+        const t = THREE.MathUtils.clamp(s.attackTimer / dur, 0, 1);
+        swing = Math.sin(Math.min(t, 0.5) * Math.PI) * (s.attackKind === "heavy" ? 1.6 : 1.1);
+      }
+      const block = s.blocking ? 1 : 0;
+      const charge = THREE.MathUtils.clamp(s.chargeTime / CONFIG.HEAVY_CHARGE_TIME, 0, 1);
+      sword.rotation.x = 0.2 - swing * 1.4 + block * 0.1;
+      sword.rotation.z = 0.1 + swing * 0.5;
+      sword.position.x = 0.32 - block * 0.22 - charge * 0.04;
+      sword.position.y = -0.34 + block * 0.16;
+      sword.position.z = -0.62 + block * 0.12;
+      const ready = Player.state.castCooldown === 0 && Vitals.state.magicka >= CONFIG.FIREBALL_COST;
+      handGlow.material.opacity += ((ready ? 0.55 : 0) - handGlow.material.opacity) * 0.15;
+      handGlow.scale.setScalar(1 + Math.sin(performance.now() * 0.006) * 0.12 * (ready ? 1 : 0));
+    }
+    return { build, update };
+  })();
+
+  /* ==========================================================================
+     9. PROJECTILES  (fireballs)
+     ========================================================================== */
+  const Projectiles = (() => {
+    let scene = null;
+    const active = [];
+    function init(s) { scene = s; }
+    function spawnFireball(origin, dir) {
+      const core = new THREE.Mesh(new THREE.SphereGeometry(CONFIG.FIREBALL_RADIUS, 14, 12),
+        new THREE.MeshBasicMaterial({ color: 0xffb347 }));
+      const glow = new THREE.Mesh(new THREE.SphereGeometry(CONFIG.FIREBALL_RADIUS * 2, 14, 12),
+        new THREE.MeshBasicMaterial({ color: 0xff5a1e, transparent: true, opacity: 0.4 }));
+      core.add(glow); core.position.copy(origin);
+      const light = new THREE.PointLight(0xff7a2e, 6, 12, 2); core.add(light);
+      scene.add(core);
+      active.push({ mesh: core, glow, light, vel: dir.clone().multiplyScalar(CONFIG.FIREBALL_SPEED),
+        life: CONFIG.FIREBALL_LIFETIME, detonating: false, det: 0 });
+    }
+    function detonate(p) { p.detonating = true; p.det = 0;
+      Entities.resolveSplash(p.mesh.position, CONFIG.FIREBALL_SPLASH, CONFIG.FIREBALL_DAMAGE); }
+    function step(dt) {
+      for (let i = active.length - 1; i >= 0; i--) {
+        const p = active[i];
+        if (p.detonating) {
+          p.det += dt; const k = p.det / 0.32;
+          p.mesh.scale.setScalar(1 + k * 5);
+          p.glow.material.opacity = Math.max(0, 0.4 * (1 - k));
+          p.mesh.material.transparent = true; p.mesh.material.opacity = Math.max(0, 1 - k);
+          p.light.intensity = Math.max(0, 6 * (1 - k));
+          if (p.det >= 0.32) { scene.remove(p.mesh); active.splice(i, 1); }
+          continue;
+        }
+        p.vel.y -= CONFIG.GRAVITY * 0.15 * dt;
+        p.mesh.position.addScaledVector(p.vel, dt); p.life -= dt;
+        const gy = Terrain.heightAt(p.mesh.position.x, p.mesh.position.z);
+        let hit = p.mesh.position.y <= gy + CONFIG.FIREBALL_RADIUS;
+        if (!hit && Entities.hitAny(p.mesh.position, CONFIG.FIREBALL_RADIUS + 0.5)) hit = true;
+        if (hit || p.life <= 0) detonate(p);
+      }
+    }
+    return { init, spawnFireball, step };
+  })();
+
+  /* ==========================================================================
+     10. DUMMIES  (inert practice targets — register as Entities)
+     ========================================================================== */
+  const Dummies = (() => {
+    let scene;
+    function init(s) { scene = s; make(9, -5); make(-9, -5); }
+    function make(x, z) {
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.42, 1.3, 10),
+        new THREE.MeshLambertMaterial({ color: 0xc7a86b })); body.position.y = 0.95;
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 10),
+        new THREE.MeshLambertMaterial({ color: 0xd8c089 })); head.position.y = 1.85;
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.9, 6),
+        new THREE.MeshLambertMaterial({ color: 0x5a4a30 })); post.position.y = 0.35;
+      g.add(post, body, head);
+      g.position.set(x, Terrain.heightAt(x, z), z); scene.add(g);
+      const e = {
+        pos: new THREE.Vector3(x, Terrain.heightAt(x, z), z), alive: true,
+        health: CONFIG.DUMMY_HEALTH, flash: 0, respawn: 0, group: g, body, head,
+        onHit(dmg) {
+          if (!e.alive) return;
+          e.health -= dmg; e.flash = 0.18;
+          if (e.health <= 0) { e.alive = false; e.respawn = CONFIG.DUMMY_RESPAWN; g.rotation.z = Math.PI / 2.2; }
+        },
+        update(dt) {
+          if (e.flash > 0) { e.flash -= dt; const k = Math.max(0, e.flash / 0.18);
+            body.material.emissive.setRGB(k, k * 0.4, 0); head.material.emissive.setRGB(k, k * 0.4, 0); }
+          if (!e.alive) { e.respawn -= dt;
+            if (e.respawn <= 0) { e.alive = true; e.health = CONFIG.DUMMY_HEALTH; g.rotation.z = 0; } }
+        },
+      };
+      Entities.register(e);
+    }
+    return { init };
+  })();
+
+  /* ==========================================================================
+     11. ENEMIES  (bandits with patrol -> chase -> attack AI)
+     Each bandit is an Entity: the player damages it through the shared
+     registry, and its AI damages the player through Vitals. On death it
+     notifies the Quest system.
+     ========================================================================== */
+  const Enemies = (() => {
+    let scene;
+    const _fwd = new THREE.Vector3();
+    function init(s) { scene = s; }
+
+    function spawnBandit(x, z, name) {
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.42, 1.25, 10),
+        new THREE.MeshLambertMaterial({ color: 0x7a2f2f })); body.position.y = 0.95;
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 10),
+        new THREE.MeshLambertMaterial({ color: 0xc9a58a })); head.position.y = 1.75;
+      const hood = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.34, 10),
+        new THREE.MeshLambertMaterial({ color: 0x3a1f1f })); hood.position.y = 1.95;
+      const sword = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.7, 0.05),
+        new THREE.MeshStandardMaterial({ color: 0x9aa0a8, metalness: 0.8, roughness: 0.4 }));
+      sword.position.set(0.34, 1.0, 0.18);
+      g.add(body, head, hood, sword);
+      const y0 = Terrain.heightAt(x, z);
+      g.position.set(x, y0, z); scene.add(g);
+
+      const b = {
+        name, group: g, body, head, sword,
+        pos: new THREE.Vector3(x, y0, z), home: { x, z }, wp: { x, z }, wpTimer: 0,
+        state: "patrol", health: CONFIG.BANDIT_HEALTH, alive: true, flash: 0,
+        atkTimer: 0, atkCd: 0, hitDone: false, yaw: 0,
+        onHit(dmg) {
+          if (!b.alive) return;
+          b.health -= dmg; b.flash = 0.18;
+          if (b.state === "patrol") b.state = "chase"; // getting hit aggroes
+          if (b.health <= 0) {
+            b.alive = false; b.state = "dead"; g.rotation.z = Math.PI / 2.2;
+            Quests.onBanditKilled(b);
+          }
+        },
+        update(dt) { updateBandit(b, dt); },
+      };
+      Entities.register(b);
+      return b;
+    }
+
+    function pickWaypoint(b) {
+      const a = Noise.rand() * Math.PI * 2, r = Noise.rand() * CONFIG.BANDIT_PATROL_RADIUS;
+      b.wp.x = b.home.x + Math.sin(a) * r; b.wp.z = b.home.z + Math.cos(a) * r;
+      b.wpTimer = 2 + Noise.rand() * 3;
+    }
+    function moveTo(b, dirx, dirz, speed, dt) {
+      const lim = Terrain.HALF - 2;
+      b.pos.x = THREE.MathUtils.clamp(b.pos.x + dirx * speed * dt, -lim, lim);
+      b.pos.z = THREE.MathUtils.clamp(b.pos.z + dirz * speed * dt, -lim, lim);
+    }
+    function dealDamageToPlayer(b) {
+      Player.forwardDir(_fwd);
+      const bx = b.pos.x - Player.state.position.x, bz = b.pos.z - Player.state.position.z;
+      const bl = Math.hypot(bx, bz) || 1;
+      const facing = (_fwd.x * bx + _fwd.z * bz) / bl;             // >0 => player looking at bandit
+      const blocked = Player.state.blocking && facing > 0.3;
+      Vitals.damage(CONFIG.BANDIT_ATTACK_DAMAGE * (blocked ? 1 - CONFIG.BLOCK_DAMAGE_REDUCTION : 1));
+    }
+
+    function updateBandit(b, dt) {
+      // Flash decay is shared by living & dead bandits.
+      if (b.flash > 0) { b.flash -= dt; const k = Math.max(0, b.flash / 0.18);
+        b.body.material.emissive.setRGB(k, k * 0.2, 0); }
+
+      if (!b.alive) return; // toppled corpse, no more logic
+
+      const p = Player.state.position;
+      const dx = p.x - b.pos.x, dz = p.z - b.pos.z;
+      const dist = Math.hypot(dx, dz);
+      const pDead = Vitals.state.dead;
+
+      // --- State transitions ---
+      if (pDead) { b.state = "patrol"; }
+      else if (b.state === "patrol") { if (dist < CONFIG.BANDIT_DETECT) b.state = "chase"; }
+      else if (b.state === "chase") {
+        if (dist > CONFIG.BANDIT_LEASH) b.state = "patrol";
+        else if (dist < CONFIG.BANDIT_ATTACK_RANGE) b.state = "attack";
+      } else if (b.state === "attack") {
+        if (dist > CONFIG.BANDIT_ATTACK_RANGE * 1.3 && b.atkTimer === 0) b.state = "chase";
+      }
+
+      // --- Behaviour ---
+      if (b.state === "patrol") {
+        b.wpTimer -= dt; if (b.wpTimer <= 0) pickWaypoint(b);
+        const wx = b.wp.x - b.pos.x, wz = b.wp.z - b.pos.z, wd = Math.hypot(wx, wz);
+        if (wd > 0.5) { moveTo(b, wx / wd, wz / wd, CONFIG.BANDIT_PATROL_SPEED, dt); b.yaw = Math.atan2(wx, wz); }
+      } else if (b.state === "chase") {
+        if (dist > 0.01) { moveTo(b, dx / dist, dz / dist, CONFIG.BANDIT_CHASE_SPEED, dt); b.yaw = Math.atan2(dx, dz); }
+      } else if (b.state === "attack") {
+        if (dist > 0.01) b.yaw = Math.atan2(dx, dz);
+        b.atkCd = Math.max(0, b.atkCd - dt);
+        if (b.atkCd === 0 && b.atkTimer === 0) { b.atkTimer = CONFIG.BANDIT_ATTACK_WINDUP + CONFIG.BANDIT_ATTACK_RECOVER; b.hitDone = false; }
+        if (b.atkTimer > 0) {
+          b.atkTimer -= dt;
+          const elapsed = (CONFIG.BANDIT_ATTACK_WINDUP + CONFIG.BANDIT_ATTACK_RECOVER) - b.atkTimer;
+          if (!b.hitDone && elapsed >= CONFIG.BANDIT_ATTACK_WINDUP) {
+            b.hitDone = true;
+            if (!pDead && dist < CONFIG.BANDIT_ATTACK_RANGE * 1.25) dealDamageToPlayer(b);
+          }
+          // A small lunge on the strike for readability.
+          b.sword.rotation.x = -Math.sin(THREE.MathUtils.clamp(elapsed / (CONFIG.BANDIT_ATTACK_WINDUP + CONFIG.BANDIT_ATTACK_RECOVER), 0, 1) * Math.PI) * 1.2;
+          if (b.atkTimer <= 0) { b.atkTimer = 0; b.atkCd = CONFIG.BANDIT_ATTACK_COOLDOWN; b.sword.rotation.x = 0; }
+        }
+      }
+
+      // Snap to terrain & push transforms to the mesh.
+      b.pos.y = Terrain.heightAt(b.pos.x, b.pos.z);
+      b.group.position.copy(b.pos);
+      b.group.rotation.y = b.yaw;
+    }
+    return { init, spawnBandit };
+  })();
+
+  /* ==========================================================================
+     12. QUESTS  (radiant "Kill the Bandit" + journal state)
+     ========================================================================== */
+  const Quests = (() => {
+    const BANDIT_NAMES = ["Garrick the Cruel", "Sable Vex", "One-Eyed Rurik", "Mad Dunmar",
+      "Bloody Cass", "Thorn Blackfen", "Grim Halvard", "Vira the Knife"];
+    const REWARD_ITEMS = ["Steel Dagger", "Health Draught", "Bandit's Signet", "Coin Purse", "Ebony Arrow ×10"];
+    const state = { gold: 0, active: null, completed: 0, log: [] };
+    let radiantIndex = 0;
+
+    function hasActive() { return state.active !== null; }
+    function isReady() { return state.active !== null && state.active.ready; }
+
+    /** Generate & begin a fresh radiant bounty (spawns the target bandit). */
+    function start() {
+      if (state.active) return;
+      radiantIndex++;
+      const name = BANDIT_NAMES[Math.floor(Noise.rand() * BANDIT_NAMES.length)];
+      const ang = Noise.rand() * Math.PI * 2;
+      const dist = CONFIG.QUEST_MIN_DIST + Noise.rand() * (CONFIG.QUEST_MAX_DIST - CONFIG.QUEST_MIN_DIST);
+      const x = Math.sin(ang) * dist, z = -Math.cos(ang) * dist; // spread around the town
+      const bandit = Enemies.spawnBandit(x, z, name);
+      const reward = {
+        gold: Math.round(CONFIG.QUEST_REWARD_MIN + Noise.rand() * (CONFIG.QUEST_REWARD_MAX - CONFIG.QUEST_REWARD_MIN)),
+        item: REWARD_ITEMS[Math.floor(Noise.rand() * REWARD_ITEMS.length)],
+      };
+      state.active = {
+        title: "Bounty: Kill the Bandit", name, target: bandit,
+        spawn: { x, z }, objective: { cur: 0, req: 1 }, reward, ready: false,
+      };
+      UI.toast(`Quest accepted — slay the bandit ${name}.`);
+      UI.refreshJournal();
+    }
+
+    /** Called by a bandit's death; advances the matching bounty. */
+    function onBanditKilled(b) {
+      if (state.active && state.active.target === b) {
+        state.active.objective.cur++;
+        if (state.active.objective.cur >= state.active.objective.req) {
+          state.active.ready = true;
+          UI.toast(`${state.active.name} lies slain. Return to Aldric for your reward.`);
+        }
+        UI.refreshJournal();
+      }
+    }
+
+    /** Hand in a completed bounty for its reward; enables the next radiant. */
+    function turnIn() {
+      const q = state.active;
+      if (!q || !q.ready) return;
+      state.gold += q.reward.gold; state.completed++;
+      state.log.unshift({ title: q.title, name: q.name, reward: q.reward });
+      UI.toast(`Reward: ${q.reward.gold} gold + ${q.reward.item}.`);
+      state.active = null;
+      UI.refreshJournal();
+    }
+    function reset() { state.active = null; } // used on respawn (bandit refs are stale)
+
+    return { state, hasActive, isReady, start, onBanditKilled, turnIn, reset };
+  })();
+
+  /* ==========================================================================
+     13. NPC  (Aldric the Watchman — quest giver)
+     ========================================================================== */
+  const NPC = (() => {
+    const NAME = "Aldric the Watchman";
+    const POS = { x: 0, z: -6 };
+    let scene, group, near = false;
+
+    function init(s) { scene = s; build(); }
+    function build() {
+      group = new THREE.Group();
+      const robe = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.48, 1.4, 12),
+        new THREE.MeshLambertMaterial({ color: 0x2f4f6b })); robe.position.y = 1.0;
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.25, 14, 12),
+        new THREE.MeshLambertMaterial({ color: 0xd8b48a })); head.position.y = 1.9;
+      const shoulders = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 10),
+        new THREE.MeshLambertMaterial({ color: 0x274257 })); shoulders.position.y = 1.55; shoulders.scale.y = 0.5;
+      // A golden quest indicator floating above the head.
+      const marker = new THREE.Mesh(new THREE.OctahedronGeometry(0.16),
+        new THREE.MeshBasicMaterial({ color: 0xffcf4d }));
+      marker.position.y = 2.5; marker.name = "marker"; group.add(marker);
+      group.add(robe, shoulders, head);
+      group.position.set(POS.x, Terrain.heightAt(POS.x, POS.z), POS.z);
+      scene.add(group);
+    }
+
+    function promptLine() {
+      if (Quests.isReady()) return { line: "You've dealt with the vermin? Come, claim your due.", act: "Turn in bounty" };
+      if (Quests.hasActive()) { const q = Quests.state.active;
+        return { line: `The bandit ${q.name} still draws breath. Track it down.`, act: "Ask for directions" }; }
+      return { line: "Traveler — a bandit has been raiding the roads. Coin awaits its killer.", act: "Accept bounty" };
+    }
+
+    /** Discrete interaction (E). Performs the contextual quest action. */
+    function tryInteract() {
+      if (!near) return;
+      if (Quests.isReady()) { Quests.turnIn(); }
+      else if (Quests.hasActive()) {
+        const q = Quests.state.active;
+        const dx = q.spawn.x - Player.state.position.x, dz = q.spawn.z - Player.state.position.z;
+        UI.toast(`${q.name} was last seen ${Math.round(Math.hypot(dx, dz))}m to the ${UI.compass(dx, dz)}.`);
+      } else { Quests.start(); }
+      refreshPrompt();
+    }
+
+    function refreshPrompt() { UI.setDialogue(near ? NAME : null, near ? promptLine() : null); }
+
+    function step(dt) {
+      const p = Player.state.position;
+      const d = Math.hypot(p.x - POS.x, p.z - POS.z);
+      const wasNear = near; near = d < CONFIG.NPC_TALK_RANGE && !Vitals.state.dead;
+      if (near || wasNear) refreshPrompt();
+      // Face the player; bob the quest marker.
+      group.rotation.y = Math.atan2(p.x - POS.x, p.z - POS.z);
+      const marker = group.getObjectByName("marker");
+      if (marker) { marker.rotation.y += dt * 2; marker.position.y = 2.5 + Math.sin(performance.now() * 0.003) * 0.08;
+        marker.visible = !Quests.hasActive() || Quests.isReady(); } // shown when action is available
+    }
+    return { init, step, tryInteract };
+  })();
+
+  /* ==========================================================================
+     14. UI
+     ========================================================================== */
+  const UI = (() => {
+    const overlay = document.getElementById("overlay");
+    const fills = { hp: document.querySelector("#bar-hp .fill"), sp: document.querySelector("#bar-sp .fill"), mp: document.querySelector("#bar-mp .fill") };
+    const hitmarker = document.getElementById("hitmarker");
+    const flash = document.getElementById("damage-flash");
+    const dlg = { root: document.getElementById("dialogue"), name: document.getElementById("dlg-name"),
+      line: document.getElementById("dlg-line"), act: document.getElementById("dlg-act") };
+    const toastEl = document.getElementById("toast");
+    const qt = { root: document.getElementById("quest-tracker"), title: document.getElementById("qt-title"),
+      obj: document.getElementById("qt-obj"), nav: document.getElementById("qt-nav") };
+
+    // Inventory
+    const STARTER_ITEMS = [
+      { icon: "🗡️", name: "Iron Sword", qty: 1 }, { icon: "🛡️", name: "Oak Shield", qty: 1 },
+      { icon: "🔥", name: "Flame Tome", qty: 1 }, { icon: "🧪", name: "Minor Heal", qty: 3 },
+      { icon: "🍖", name: "Rations", qty: 5 }, { icon: "🔑", name: "Rusted Key", qty: 1 },
+    ];
+    function buildInventory() {
+      const grid = document.getElementById("inv-grid"), frag = document.createDocumentFragment();
+      for (let i = 0; i < 24; i++) {
+        const slot = document.createElement("div"), item = STARTER_ITEMS[i];
+        if (item) { slot.className = "inv-slot"; slot.innerHTML = `${item.icon}<span class="label">${item.name}</span>` + (item.qty > 1 ? `<span class="qty">×${item.qty}</span>` : ""); }
+        else slot.className = "inv-slot empty";
+        frag.appendChild(slot);
+      }
+      grid.appendChild(frag);
+    }
+    const inv = document.getElementById("inventory"), jrn = document.getElementById("journal");
+    let invOpen = false, jrnOpen = false;
+    function toggleInventory() { invOpen = !invOpen; inv.classList.toggle("open", invOpen); }
+    function toggleJournal() { jrnOpen = !jrnOpen; jrn.classList.toggle("open", jrnOpen); if (jrnOpen) refreshJournal(); }
+    function closeModals() { invOpen = jrnOpen = false; inv.classList.remove("open"); jrn.classList.remove("open"); }
+    function showOverlay(show) { overlay.classList.toggle("hidden", !show); }
+
+    function showHit() { hitmarker.classList.remove("show"); void hitmarker.offsetWidth; hitmarker.classList.add("show"); }
+    let flashTimer = 0;
+    function flashDamage() { flash.classList.add("hit"); flashTimer = 0.18; }
+
+    // Toast
+    let toastTimer = 0;
+    function toast(msg) { toastEl.textContent = msg; toastEl.classList.add("show"); toastTimer = 3.2; }
+
+    // NPC dialogue prompt
+    function setDialogue(name, content) {
+      if (!name || !content) { dlg.root.classList.remove("show"); return; }
+      dlg.name.textContent = name; dlg.line.textContent = content.line;
+      dlg.act.innerHTML = `<b>[E]</b> ${content.act}`;
+      dlg.root.classList.add("show");
+    }
+
+    // 8-point compass (North = -Z, East = +X)
+    function compass(dx, dz) {
+      const ang = Math.atan2(dx, -dz), dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+      return dirs[Math.round(((ang + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 4)) % 8];
+    }
+
+    // Journal
+    function refreshJournal() {
+      const list = document.getElementById("journal-list");
+      const summary = document.getElementById("journal-summary");
+      summary.innerHTML = `Gold: <b style="color:var(--hud-accent)">${Quests.state.gold}</b> &nbsp;·&nbsp; Bounties completed: <b>${Quests.state.completed}</b>`;
+      list.innerHTML = "";
+      const q = Quests.state.active;
+      if (q) {
+        const done = q.objective.cur >= q.objective.req;
+        const el = document.createElement("div"); el.className = "quest-entry";
+        el.innerHTML = `<div class="qe-title">${q.title}</div>
+          <div class="qe-desc">A bandit known as <b>${q.name}</b> is terrorizing the roads near town. Hunt it down and return to Aldric the Watchman.</div>
+          <div class="qe-obj ${done ? "done" : ""}">${done ? "✔" : "•"} Slay ${q.name} &nbsp;(${q.objective.cur}/${q.objective.req})</div>
+          <div class="qe-reward">Reward: ${q.reward.gold} gold + ${q.reward.item}${done ? " — ready to turn in" : ""}</div>`;
+        list.appendChild(el);
+      }
+      for (const done of Quests.state.log) {
+        const el = document.createElement("div"); el.className = "quest-entry";
+        el.style.opacity = "0.6";
+        el.innerHTML = `<div class="qe-title">${done.title} <span style="font-size:11px">(Completed)</span></div>
+          <div class="qe-obj done">✔ Slew ${done.name}</div>
+          <div class="qe-reward">Received: ${done.reward.gold} gold + ${done.reward.item}</div>`;
+        list.appendChild(el);
+      }
+      if (!q && Quests.state.log.length === 0)
+        list.innerHTML = `<div class="journal-empty">No quests yet. Speak with Aldric the Watchman to take a bounty.</div>`;
+    }
+
+    function onPlayerDeath() {
+      overlay.querySelector("h1").textContent = "YOU HAVE FALLEN";
+      overlay.querySelector(".sub").textContent = "The realm reclaims the unworthy. Click to rise again.";
+      document.getElementById("start-btn").textContent = "RESPAWN";
+      showOverlay(true);
+    }
+
+    // HUD + tracker
+    let fpsAcc = 0, fpsFrames = 0, fpsTimer = 0;
+    function updateHud(dt) {
+      const v = Vitals.state;
+      fills.hp.style.transform = `scaleX(${v.health / CONFIG.MAX_HEALTH})`;
+      fills.sp.style.transform = `scaleX(${v.stamina / CONFIG.MAX_STAMINA})`;
+      fills.mp.style.transform = `scaleX(${v.magicka / CONFIG.MAX_MAGICKA})`;
+      document.getElementById("txt-hp").textContent = `HEALTH ${Math.round(v.health)}`;
+      document.getElementById("txt-sp").textContent = `STAMINA ${Math.round(v.stamina)}`;
+      document.getElementById("txt-mp").textContent = `MAGICKA ${Math.round(v.magicka)}`;
+      document.getElementById("gold").textContent = Quests.state.gold;
+      document.getElementById("hud-alt").textContent = Player.state.position.y.toFixed(1);
+
+      // Quest tracker
+      const q = Quests.state.active;
+      if (q) {
+        qt.root.classList.add("show");
+        qt.title.textContent = q.title;
+        const done = q.objective.cur >= q.objective.req;
+        qt.obj.innerHTML = `<span class="${done ? "qt-done" : ""}">Slay ${q.name} (${q.objective.cur}/${q.objective.req})</span>`;
+        if (done) { qt.nav.innerHTML = `<span class="qt-done">Return to Aldric ↩</span>`; }
+        else {
+          const dx = q.spawn.x - Player.state.position.x, dz = q.spawn.z - Player.state.position.z;
+          qt.nav.textContent = `Target: ${Math.round(Math.hypot(dx, dz))}m ${compass(dx, dz)}`;
+        }
+      } else qt.root.classList.remove("show");
+
+      // FPS
+      fpsAcc += 1 / Math.max(dt, 1e-6); fpsFrames++; fpsTimer += dt;
+      if (fpsTimer >= 0.5) { document.getElementById("hud-fps").textContent = Math.round(fpsAcc / fpsFrames); fpsAcc = 0; fpsFrames = 0; fpsTimer = 0; }
+
+      if (flashTimer > 0) { flashTimer -= dt; if (flashTimer <= 0) flash.classList.remove("hit"); }
+      if (toastTimer > 0) { toastTimer -= dt; if (toastTimer <= 0) toastEl.classList.remove("show"); }
+    }
+
+    return { buildInventory, toggleInventory, toggleJournal, closeModals, showOverlay, updateHud,
+      showHit, flashDamage, onPlayerDeath, toast, setDialogue, refreshJournal, compass };
+  })();
+
+  /* ==========================================================================
+     15. GAME  (scene assembly, pointer lock, fixed-timestep loop)
+     ========================================================================== */
+  const Game = (() => {
+    const canvas = document.getElementById("game-canvas");
+    let renderer, scene, controls, running = false, lastTime = 0, accumulator = 0;
+
+    function initScene() {
+      renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x9fb8d4);
+      scene.fog = new THREE.Fog(0x9fb8d4, CONFIG.FOG_NEAR, CONFIG.FOG_FAR);
+      scene.add(new THREE.HemisphereLight(0xbcd3ff, 0x4a3f2a, 0.85));
+      const sun = new THREE.DirectionalLight(0xfff2d6, 1.1); sun.position.set(-260, 320, 180); scene.add(sun);
+
+      scene.add(Terrain.build());
+      scatterBoulders(scene, 40);
+
+      Projectiles.init(scene);
+      Dummies.init(scene);
+      Enemies.init(scene);
+      NPC.init(scene);
+
+      scene.add(Player.rig);
+      Player.spawn(0, 0);
+      Viewmodel.build(Player.camera);
+
+      controls = new PointerLockControls(Player.camera, canvas);
+      document.addEventListener("mousemove", (e) => { if (controls.isLocked) Player.look(e.movementX || 0, e.movementY || 0); });
+      controls.addEventListener("lock", () => { UI.showOverlay(false); Input.reset(); });
+      controls.addEventListener("unlock", () => { UI.showOverlay(true); Input.reset(); });
+
+      canvas.addEventListener("mousedown", (e) => {
+        if (!controls.isLocked) return;
+        if (e.button === 0) Input.state.lmbDown = true;
+        else if (e.button === 2) Input.state.blocking = true;
+      });
+      window.addEventListener("mouseup", (e) => {
+        if (e.button === 0 && Input.state.lmbDown) { Input.state.lmbDown = false; Input.state.lmbReleaseQueued = true; }
+        else if (e.button === 2) Input.state.blocking = false;
+      });
+      window.addEventListener("contextmenu", (e) => e.preventDefault());
+      addEventListener("resize", onResize);
+    }
+
+    function scatterBoulders(scene, count) {
+      const geo = new THREE.IcosahedronGeometry(1, 0);
+      const mat = new THREE.MeshLambertMaterial({ color: 0x6b645c, flatShading: true });
+      for (let i = 0; i < count; i++) {
+        const a = i * 2.399963, r = 40 + (i / count) * (Terrain.HALF - 120);
+        const x = Math.cos(a) * r, z = Math.sin(a) * r, s = 1.5 + ((i * 37) % 5);
+        const rock = new THREE.Mesh(geo, mat);
+        rock.position.set(x, Terrain.heightAt(x, z) + s * 0.4, z);
+        rock.scale.setScalar(s); rock.rotation.set(i, i * 1.7, i * 0.3);
+        scene.add(rock);
+      }
+    }
+    function onResize() { renderer.setSize(innerWidth, innerHeight); Player.onResize(); }
+
+    function frame(now) {
+      if (!running) return;
+      requestAnimationFrame(frame);
+      const seconds = now / 1000;
+      let dt = seconds - lastTime; lastTime = seconds;
+      if (dt > CONFIG.MAX_FRAME_DT) dt = CONFIG.MAX_FRAME_DT;
+
+      accumulator += dt;
+      while (accumulator >= CONFIG.FIXED_DT) {
+        Player.step(CONFIG.FIXED_DT, Input.state);
+        Projectiles.step(CONFIG.FIXED_DT);
+        Entities.step(CONFIG.FIXED_DT);   // dummies + bandit AI
+        NPC.step(CONFIG.FIXED_DT);
+        accumulator -= CONFIG.FIXED_DT;
+      }
+
+      Player.syncToRig();
+      Viewmodel.update();
+      UI.updateHud(dt);
+      renderer.render(scene, Player.camera);
+    }
+
+    function start() {
+      if (Vitals.state.dead) {
+        Vitals.respawn(); Player.spawn(0, 0);
+        document.querySelector("#overlay h1").textContent = "AETHERIA";
+        document.querySelector("#overlay .sub").textContent = "Milestone 3 — World, NPCs & Quests";
+        document.getElementById("start-btn").textContent = "CLICK TO ENTER THE WORLD";
+      }
+      if (!running) { running = true; lastTime = performance.now() / 1000; requestAnimationFrame(frame); }
+      controls.lock();
+    }
+    return { initScene, start };
+  })();
+
+  /* ==========================================================================
+     16. BOOTSTRAP
+     ========================================================================== */
+  (function checkWebGL() {
+    try {
+      const gl = document.createElement("canvas").getContext("webgl") || document.createElement("canvas").getContext("experimental-webgl");
+      if (!gl) throw new Error("no context");
+    } catch (e) {
+      showFatal("Your browser or device does not support WebGL, which this game requires.",
+                "Try a recent version of Chrome, Firefox, Edge or Safari.");
+      throw e;
+    }
+  })();
+
+  UI.buildInventory();
+  UI.refreshJournal();
+  Game.initScene();
+
+  document.getElementById("start-btn").addEventListener("click", () => Game.start());
+  document.getElementById("game-canvas").addEventListener("click", () => Game.start());
+  window.addEventListener("keydown", (e) => { if (e.code === "Escape") UI.closeModals(); });
+
+  console.log("%cAETHERIA — Milestone 3 ready.", "color:#c9a227;font-weight:bold");
+  </script>
+</body>
+</html>

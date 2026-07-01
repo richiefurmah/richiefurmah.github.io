@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Aetheria — Milestone 1: Foundation &amp; Player</title>
+<!--
+  ============================================================================
+  AETHERIA  —  A high-fantasy, first-person open-world action RPG
+  ----------------------------------------------------------------------------
+  MILESTONE 1 : The Foundation and Player
+    * Decoupled first-person camera rig (yaw / pitch separated from the body)
+    * Procedurally generated mountainous, open-plain starter world
+    * Deterministic, fixed-timestep player physics (server-authority ready)
+    * Basic inventory screen with placeholder UI
+
+  TECH STACK : HTML5 + CSS3 + JavaScript (ES Modules) + Three.js (WebGL)
+  ASSETS     : 100% procedural — no external meshes, textures or audio.
+               Only dependency is the Three.js engine from a public CDN.
+
+  ARCHITECTURAL NOTE ON "SERVER-AUTHORITATIVE" LOGIC
+  --------------------------------------------------
+  This project ships to a static host (GitHub Pages) and Milestone 1 is
+  single-player, so there is no network peer to be "authoritative" yet.
+  Instead we build the foundation the authoritative server will need:
+  the simulation is fully DETERMINISTIC and advanced on a FIXED TIMESTEP
+  (see FIXED_DT / Game.update). All player state lives in a single plain
+  object (Player.state) that could be serialized and validated by a server
+  without touching rendering code. When multiplayer is introduced, this
+  same step function runs on the server and the client merely reconciles.
+  ============================================================================
+-->
+<style>
+  :root {
+    --hud-fg: #e9e0c8;
+    --hud-accent: #c9a227;
+    --panel-bg: rgba(18, 16, 12, 0.92);
+    --panel-border: #5a4a24;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #0a0d12;
+    color: var(--hud-fg);
+    font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+    cursor: default;
+    user-select: none;
+  }
+
+  #game-canvas { display: block; width: 100vw; height: 100vh; }
+
+  /* ---- Crosshair -------------------------------------------------------- */
+  #crosshair {
+    position: fixed;
+    top: 50%; left: 50%;
+    width: 18px; height: 18px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    opacity: 0.7;
+    z-index: 10;
+  }
+  #crosshair::before, #crosshair::after {
+    content: "";
+    position: absolute;
+    background: var(--hud-fg);
+  }
+  #crosshair::before { left: 50%; top: 0; width: 2px; height: 100%; transform: translateX(-50%); }
+  #crosshair::after  { top: 50%; left: 0; height: 2px; width: 100%; transform: translateY(-50%); }
+
+  /* ---- Heads-up display ------------------------------------------------- */
+  #hud {
+    position: fixed;
+    left: 16px; bottom: 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    text-shadow: 0 1px 3px #000;
+    pointer-events: none;
+    z-index: 10;
+  }
+  #hud .stat { color: var(--hud-accent); font-weight: bold; }
+
+  /* ---- Center prompt / start overlay ----------------------------------- */
+  #overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: radial-gradient(ellipse at center, rgba(10,13,18,0.72), rgba(4,5,8,0.96));
+    z-index: 20;
+    transition: opacity 0.4s ease;
+  }
+  #overlay.hidden { opacity: 0; pointer-events: none; }
+  #overlay h1 {
+    font-size: 44px;
+    letter-spacing: 4px;
+    color: var(--hud-accent);
+    text-shadow: 0 2px 12px #000;
+    margin-bottom: 8px;
+  }
+  #overlay .sub { font-size: 15px; opacity: 0.8; margin-bottom: 26px; letter-spacing: 1px; }
+  #overlay .keys { font-size: 13px; opacity: 0.7; line-height: 1.9; }
+  #overlay .keys b { color: var(--hud-fg); }
+  #overlay .cta {
+    margin-top: 26px;
+    padding: 12px 28px;
+    border: 1px solid var(--panel-border);
+    background: var(--panel-bg);
+    color: var(--hud-fg);
+    border-radius: 4px;
+    font-size: 15px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+  #overlay .cta:hover { border-color: var(--hud-accent); color: var(--hud-accent); }
+
+  /* ---- Inventory panel -------------------------------------------------- */
+  #inventory {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(4, 5, 8, 0.55);
+    z-index: 15;
+  }
+  #inventory.open { display: flex; }
+  #inventory .panel {
+    width: min(680px, 90vw);
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 22px 24px;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.6);
+  }
+  #inventory h2 {
+    color: var(--hud-accent);
+    letter-spacing: 3px;
+    font-size: 20px;
+    margin-bottom: 4px;
+  }
+  #inventory .hint { font-size: 12px; opacity: 0.6; margin-bottom: 16px; }
+  #inv-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+  }
+  .inv-slot {
+    aspect-ratio: 1 / 1;
+    border: 1px solid #3a3018;
+    border-radius: 4px;
+    background: rgba(40, 34, 20, 0.5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    position: relative;
+    transition: border-color 0.15s;
+  }
+  .inv-slot:hover { border-color: var(--hud-accent); }
+  .inv-slot.empty { color: #4a4230; font-size: 12px; }
+  .inv-slot .label {
+    position: absolute;
+    bottom: 3px;
+    font-size: 9px;
+    opacity: 0.65;
+    letter-spacing: 0.5px;
+  }
+  .inv-slot .qty {
+    position: absolute;
+    top: 3px; right: 5px;
+    font-size: 10px;
+    color: var(--hud-accent);
+  }
+
+  /* ---- Fatal-error overlay --------------------------------------------- */
+  #fatal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px;
+    background: #12080a;
+    color: #f0c9c9;
+    z-index: 100;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  #fatal h2 { color: #e06666; margin-bottom: 12px; letter-spacing: 2px; }
+  #fatal code { display: block; margin-top: 14px; opacity: 0.7; font-size: 12px; }
+</style>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+
+  <div id="crosshair"></div>
+
+  <div id="hud">
+    <div>Position: <span class="stat" id="hud-pos">–</span></div>
+    <div>Altitude: <span class="stat" id="hud-alt">–</span>m &nbsp;·&nbsp; FPS: <span class="stat" id="hud-fps">–</span></div>
+    <div style="opacity:0.6; margin-top:4px;">[I] Inventory &nbsp; [ESC] Release mouse</div>
+  </div>
+
+  <!-- Inventory: placeholder UI for Milestone 1 -->
+  <div id="inventory">
+    <div class="panel">
+      <h2>INVENTORY</h2>
+      <div class="hint">Placeholder loadout — item interaction arrives in a later milestone. Press [I] or [ESC] to close.</div>
+      <div id="inv-grid"></div>
+    </div>
+  </div>
+
+  <!-- Start / pause overlay -->
+  <div id="overlay">
+    <h1>AETHERIA</h1>
+    <div class="sub">Milestone 1 — The Foundation &amp; Player</div>
+    <div class="keys">
+      <b>W A S D</b> — Move &nbsp;·&nbsp; <b>Mouse</b> — Look &nbsp;·&nbsp; <b>Space</b> — Jump<br />
+      <b>Shift</b> — Sprint &nbsp;·&nbsp; <b>I</b> — Inventory &nbsp;·&nbsp; <b>Esc</b> — Release cursor
+    </div>
+    <button class="cta" id="start-btn">CLICK TO ENTER THE WORLD</button>
+  </div>
+
+  <!-- Fatal-error surface (shown by global error handlers) -->
+  <div id="fatal">
+    <h2>THE REALM FAILED TO LOAD</h2>
+    <div id="fatal-msg">An unexpected error occurred.</div>
+    <code id="fatal-detail"></code>
+  </div>
+
+  <!--
+    Three.js is loaded as an ES module from a public CDN (jsDelivr).
+    An import map lets us use bare specifiers ("three", "three/addons/...").
+  -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+  "use strict";
+
+  /* ==========================================================================
+     0. GLOBAL ERROR HANDLING
+     Any uncaught error or module-load failure surfaces a readable overlay
+     instead of a silent black screen.
+     ========================================================================== */
+  function showFatal(message, detail) {
+    const el = document.getElementById("fatal");
+    document.getElementById("fatal-msg").textContent = message;
+    document.getElementById("fatal-detail").textContent = detail || "";
+    if (el) el.style.display = "flex";
+    console.error("[Aetheria:FATAL]", message, detail || "");
+  }
+  window.addEventListener("error", (e) =>
+    showFatal("A runtime error stopped the game.", e.message + " @ " + (e.filename || "") + ":" + (e.lineno || "")));
+  window.addEventListener("unhandledrejection", (e) =>
+    showFatal("A module or async task failed.", (e.reason && e.reason.message) || String(e.reason)));
+
+  /* --- Import the engine. A CDN failure is caught and reported. ---------- */
+  let THREE, PointerLockControls;
+  try {
+    THREE = await import("three");
+    ({ PointerLockControls } = await import("three/addons/controls/PointerLockControls.js"));
+  } catch (err) {
+    showFatal("Could not load the Three.js engine from the CDN. Check your network connection.", String(err));
+    throw err;
+  }
+
+  /* ==========================================================================
+     1. CONFIGURATION
+     Single source of truth for tunable constants. Physics values are in
+     metres / seconds so the numbers read like the real world.
+     ========================================================================== */
+  const CONFIG = Object.freeze({
+    // --- Simulation ---
+    FIXED_DT: 1 / 60,          // seconds — deterministic physics step (server-ready)
+    MAX_FRAME_DT: 0.25,        // clamp huge frame gaps (tab switch) to avoid tunnelling
+
+    // --- World ---
+    WORLD_SIZE: 1000,          // metres, square terrain
+    TERRAIN_SEGMENTS: 200,     // grid resolution (201x201 verts)
+    SEED: 1337,                // deterministic terrain seed
+    MOUNTAIN_HEIGHT: 120,      // peak amplitude in metres
+    FOG_NEAR: 120,
+    FOG_FAR: 780,
+
+    // --- Player physics ---
+    EYE_HEIGHT: 1.7,           // camera offset above the feet
+    WALK_SPEED: 7.0,           // m/s
+    SPRINT_SPEED: 12.0,        // m/s
+    ACCEL: 60.0,               // m/s^2 ground acceleration
+    FRICTION: 10.0,            // ground damping coefficient
+    GRAVITY: 24.0,             // m/s^2 (game-feel gravity, higher than real 9.8)
+    JUMP_SPEED: 8.5,           // m/s initial upward velocity
+    AIR_CONTROL: 0.25,         // fraction of ground accel usable while airborne
+
+    // --- Camera ---
+    MOUSE_SENSITIVITY: 0.0022,
+    PITCH_LIMIT: Math.PI / 2 - 0.05, // clamp look up/down just short of vertical
+    FOV: 75,
+  });
+
+  /* ==========================================================================
+     2. DETERMINISTIC NOISE
+     A small, dependency-free value-noise + fractal Brownian motion (fBm)
+     generator. Seeded so the same world is produced every run — a hard
+     requirement for future server/client agreement on terrain.
+     ========================================================================== */
+  const Noise = (() => {
+    // Mulberry32: tiny, fast, seedable PRNG.
+    function mulberry32(a) {
+      return function () {
+        a |= 0; a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    // Build a permutation table + gradient hash from the seed.
+    const rand = mulberry32(CONFIG.SEED);
+    const perm = new Uint8Array(512);
+    const p = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) p[i] = i;
+    for (let i = 255; i > 0; i--) {           // Fisher–Yates shuffle
+      const j = Math.floor(rand() * (i + 1));
+      [p[i], p[j]] = [p[j], p[i]];
+    }
+    for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
+
+    const fade = (t) => t * t * t * (t * (t * 6 - 15) + 10); // smootherstep
+    const lerp = (a, b, t) => a + t * (b - a);
+    const hash = (x, y) => perm[(perm[x & 255] + y) & 255] / 255 * 2 - 1;
+
+    // 2D value noise in roughly [-1, 1].
+    function valueNoise(x, y) {
+      const xi = Math.floor(x), yi = Math.floor(y);
+      const xf = x - xi, yf = y - yi;
+      const u = fade(xf), v = fade(yf);
+      const n00 = hash(xi,     yi);
+      const n10 = hash(xi + 1, yi);
+      const n01 = hash(xi,     yi + 1);
+      const n11 = hash(xi + 1, yi + 1);
+      return lerp(lerp(n00, n10, u), lerp(n01, n11, u), v);
+    }
+
+    // Fractal Brownian motion — stacks octaves for natural mountain detail.
+    function fbm(x, y, octaves = 5, lacunarity = 2.0, gain = 0.5) {
+      let amp = 1, freq = 1, sum = 0, norm = 0;
+      for (let o = 0; o < octaves; o++) {
+        sum += amp * valueNoise(x * freq, y * freq);
+        norm += amp;
+        amp *= gain;
+        freq *= lacunarity;
+      }
+      return sum / norm; // normalized to ~[-1, 1]
+    }
+
+    return { fbm };
+  })();
+
+  /* ==========================================================================
+     3. TERRAIN
+     Generates the mountainous open-plain world and exposes a continuous
+     heightAt(x, z) function used for player-ground collision.
+     ========================================================================== */
+  const Terrain = (() => {
+    const HALF = CONFIG.WORLD_SIZE / 2;
+    const NOISE_SCALE = 0.0016; // world-units -> noise-space
+
+    /**
+     * Continuous ground height for any world (x, z).
+     * A central "plain" is kept flat-ish so the player starts on open ground,
+     * with amplitude ramping up toward the edges to form encircling mountains.
+     */
+    function heightAt(x, z) {
+      // Base rolling terrain.
+      let h = Noise.fbm(x * NOISE_SCALE, z * NOISE_SCALE, 5);
+
+      // Radial mask: flat plain in the middle, mountains toward the rim.
+      const dist = Math.sqrt(x * x + z * z) / HALF;      // 0 at center -> 1 at edge
+      const mountainMask = Math.min(1, Math.max(0, (dist - 0.25) / 0.75));
+      const ridged = Math.pow(Math.abs(h), 0.8);          // sharpen peaks
+
+      // Gentle plain component + masked mountains.
+      const plain = h * 6.0;
+      const mountains = ridged * CONFIG.MOUNTAIN_HEIGHT * mountainMask * mountainMask;
+      return plain + mountains;
+    }
+
+    /** Build the terrain mesh with height-based vertex colouring. */
+    function build() {
+      const seg = CONFIG.TERRAIN_SEGMENTS;
+      const geo = new THREE.PlaneGeometry(CONFIG.WORLD_SIZE, CONFIG.WORLD_SIZE, seg, seg);
+      geo.rotateX(-Math.PI / 2); // lay flat (XZ plane, +Y up)
+
+      const pos = geo.attributes.position;
+      const colors = new Float32Array(pos.count * 3);
+
+      const cGrass = new THREE.Color(0x4b6b32);
+      const cRock  = new THREE.Color(0x6d635a);
+      const cSnow  = new THREE.Color(0xeef2f5);
+      const cDirt  = new THREE.Color(0x5c4a30);
+      const tmp    = new THREE.Color();
+
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i);
+        const z = pos.getZ(i);
+        const y = heightAt(x, z);
+        pos.setY(i, y);
+
+        // Colour by altitude for a believable biome gradient (no textures).
+        const t = THREE.MathUtils.clamp(y / CONFIG.MOUNTAIN_HEIGHT, 0, 1);
+        if (t < 0.05)       tmp.copy(cDirt).lerp(cGrass, t / 0.05);
+        else if (t < 0.45)  tmp.copy(cGrass).lerp(cRock, (t - 0.05) / 0.40);
+        else                tmp.copy(cRock).lerp(cSnow, (t - 0.45) / 0.55);
+
+        colors[i * 3 + 0] = tmp.r;
+        colors[i * 3 + 1] = tmp.g;
+        colors[i * 3 + 2] = tmp.b;
+      }
+
+      geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      geo.computeVertexNormals();
+
+      const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: false });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.receiveShadow = true;
+      mesh.name = "terrain";
+      return mesh;
+    }
+
+    return { build, heightAt, HALF };
+  })();
+
+  /* ==========================================================================
+     4. INPUT MANAGER
+     Normalizes keyboard state into a simple, pollable structure. Decouples
+     "what the player is pressing" from "what the simulation does with it".
+     ========================================================================== */
+  const Input = (() => {
+    const keys = Object.create(null);
+    const state = { forward: 0, right: 0, jump: false, sprint: false };
+
+    const MAP = {
+      KeyW: "up", ArrowUp: "up",
+      KeyS: "down", ArrowDown: "down",
+      KeyA: "left", ArrowLeft: "left",
+      KeyD: "right", ArrowRight: "right",
+      Space: "jump",
+      ShiftLeft: "sprint", ShiftRight: "sprint",
+    };
+
+    function refresh() {
+      state.forward = (keys.up ? 1 : 0) - (keys.down ? 1 : 0);
+      state.right   = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+      state.jump    = !!keys.jump;
+      state.sprint  = !!keys.sprint;
+    }
+
+    function onKey(down) {
+      return (e) => {
+        const action = MAP[e.code];
+        if (action) { keys[action] = down; e.preventDefault(); refresh(); }
+        // Inventory toggle fires on key-down only.
+        if (down && (e.code === "KeyI")) UI.toggleInventory();
+      };
+    }
+
+    function reset() { for (const k in keys) keys[k] = false; refresh(); }
+
+    window.addEventListener("keydown", onKey(true));
+    window.addEventListener("keyup", onKey(false));
+
+    return { state, reset };
+  })();
+
+  /* ==========================================================================
+     5. PLAYER  (decoupled camera rig + deterministic physics)
+     Rig hierarchy:
+        yawObject (Y-rotation, holds world position)
+          └─ pitchObject (X-rotation)
+               └─ camera
+     Body movement is applied to yawObject; the camera pitch is fully
+     decoupled so looking up/down never affects the movement direction.
+     ========================================================================== */
+  const Player = (() => {
+    // --- Rig ---
+    const camera = new THREE.PerspectiveCamera(
+      CONFIG.FOV, window.innerWidth / window.innerHeight, 0.1, 2000);
+    const pitchObject = new THREE.Object3D();
+    const yawObject = new THREE.Object3D();
+    pitchObject.add(camera);
+    yawObject.add(pitchObject);
+
+    // --- Authoritative simulation state (serializable) ---
+    const state = {
+      position: new THREE.Vector3(0, 0, 0), // feet position (world)
+      velocity: new THREE.Vector3(0, 0, 0),
+      yaw: 0,
+      pitch: 0,
+      onGround: false,
+    };
+
+    // Scratch vectors reused each step to avoid per-frame allocation.
+    const _wish = new THREE.Vector3();
+    const _fwd = new THREE.Vector3();
+    const _right = new THREE.Vector3();
+
+    /** Place the player on the ground at (x, z) with a small clearance. */
+    function spawn(x, z) {
+      state.position.set(x, Terrain.heightAt(x, z) + CONFIG.EYE_HEIGHT, z);
+      state.velocity.set(0, 0, 0);
+      state.onGround = true;
+    }
+
+    /** Apply mouse deltas to yaw/pitch (called from pointer-lock handler). */
+    function look(dx, dy) {
+      state.yaw   -= dx * CONFIG.MOUSE_SENSITIVITY;
+      state.pitch -= dy * CONFIG.MOUSE_SENSITIVITY;
+      state.pitch = THREE.MathUtils.clamp(state.pitch, -CONFIG.PITCH_LIMIT, CONFIG.PITCH_LIMIT);
+    }
+
+    /**
+     * Advance the simulation by exactly one FIXED_DT. Deterministic given the
+     * same inputs — this is the function a server would run authoritatively.
+     */
+    function step(dt, input) {
+      // Horizontal "wish" direction from input, relative to yaw only.
+      _fwd.set(-Math.sin(state.yaw), 0, -Math.cos(state.yaw));
+      _right.set(Math.cos(state.yaw), 0, -Math.sin(state.yaw));
+      _wish.set(0, 0, 0)
+        .addScaledVector(_fwd, input.forward)
+        .addScaledVector(_right, input.right);
+      if (_wish.lengthSq() > 0) _wish.normalize();
+
+      const targetSpeed = input.sprint ? CONFIG.SPRINT_SPEED : CONFIG.WALK_SPEED;
+      const control = state.onGround ? 1 : CONFIG.AIR_CONTROL;
+
+      // Horizontal velocity integration with acceleration + friction.
+      const vh = new THREE.Vector3(state.velocity.x, 0, state.velocity.z);
+      if (state.onGround) {
+        const speed = vh.length();
+        if (speed > 0) {
+          const drop = speed * CONFIG.FRICTION * dt;
+          vh.multiplyScalar(Math.max(speed - drop, 0) / speed);
+        }
+      }
+      vh.addScaledVector(_wish, CONFIG.ACCEL * control * dt);
+      if (vh.length() > targetSpeed) vh.setLength(targetSpeed);
+      state.velocity.x = vh.x;
+      state.velocity.z = vh.z;
+
+      // Gravity + jump.
+      state.velocity.y -= CONFIG.GRAVITY * dt;
+      if (input.jump && state.onGround) {
+        state.velocity.y = CONFIG.JUMP_SPEED;
+        state.onGround = false;
+      }
+
+      // Integrate position.
+      state.position.addScaledVector(state.velocity, dt);
+
+      // Ground collision against the terrain heightfield.
+      const groundY = Terrain.heightAt(state.position.x, state.position.z) + CONFIG.EYE_HEIGHT;
+      if (state.position.y <= groundY) {
+        state.position.y = groundY;
+        if (state.velocity.y < 0) state.velocity.y = 0;
+        state.onGround = true;
+      } else {
+        state.onGround = false;
+      }
+
+      // Keep the player inside the world bounds.
+      const lim = Terrain.HALF - 2;
+      state.position.x = THREE.MathUtils.clamp(state.position.x, -lim, lim);
+      state.position.z = THREE.MathUtils.clamp(state.position.z, -lim, lim);
+    }
+
+    /** Push simulation state into the render rig (called once per frame). */
+    function syncToRig() {
+      yawObject.position.copy(state.position);
+      yawObject.rotation.y = state.yaw;
+      pitchObject.rotation.x = state.pitch;
+    }
+
+    function onResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+    }
+
+    return { camera, rig: yawObject, state, spawn, look, step, syncToRig, onResize };
+  })();
+
+  /* ==========================================================================
+     6. UI  (overlay, HUD, inventory)
+     ========================================================================== */
+  const UI = (() => {
+    const overlay = document.getElementById("overlay");
+    const inventory = document.getElementById("inventory");
+    const hudPos = document.getElementById("hud-pos");
+    const hudAlt = document.getElementById("hud-alt");
+    const hudFps = document.getElementById("hud-fps");
+
+    // Placeholder starting loadout for the inventory grid.
+    const STARTER_ITEMS = [
+      { icon: "🗡️", name: "Iron Sword", qty: 1 },
+      { icon: "🛡️", name: "Oak Shield", qty: 1 },
+      { icon: "🧪", name: "Minor Heal", qty: 3 },
+      { icon: "🔥", name: "Flame Tome", qty: 1 },
+      { icon: "🍖", name: "Rations", qty: 5 },
+      { icon: "🔑", name: "Rusted Key", qty: 1 },
+    ];
+    const TOTAL_SLOTS = 24;
+
+    function buildInventory() {
+      const grid = document.getElementById("inv-grid");
+      const frag = document.createDocumentFragment();
+      for (let i = 0; i < TOTAL_SLOTS; i++) {
+        const slot = document.createElement("div");
+        const item = STARTER_ITEMS[i];
+        if (item) {
+          slot.className = "inv-slot";
+          slot.innerHTML =
+            `${item.icon}` +
+            `<span class="label">${item.name}</span>` +
+            (item.qty > 1 ? `<span class="qty">×${item.qty}</span>` : "");
+        } else {
+          slot.className = "inv-slot empty";
+          slot.textContent = "";
+        }
+        frag.appendChild(slot);
+      }
+      grid.appendChild(frag);
+    }
+
+    let inventoryOpen = false;
+    function toggleInventory() {
+      inventoryOpen = !inventoryOpen;
+      inventory.classList.toggle("open", inventoryOpen);
+    }
+    function closeInventory() {
+      inventoryOpen = false;
+      inventory.classList.remove("open");
+    }
+
+    function showOverlay(show) { overlay.classList.toggle("hidden", !show); }
+
+    // FPS smoothing.
+    let fpsAcc = 0, fpsFrames = 0, fpsTimer = 0, fpsShown = 60;
+    function updateHud(pos, dt) {
+      hudPos.textContent = `${pos.x.toFixed(0)}, ${pos.z.toFixed(0)}`;
+      hudAlt.textContent = pos.y.toFixed(1);
+      fpsAcc += 1 / Math.max(dt, 1e-6); fpsFrames++; fpsTimer += dt;
+      if (fpsTimer >= 0.5) {
+        fpsShown = Math.round(fpsAcc / fpsFrames);
+        fpsAcc = 0; fpsFrames = 0; fpsTimer = 0;
+        hudFps.textContent = fpsShown;
+      }
+    }
+
+    return { buildInventory, toggleInventory, closeInventory, showOverlay, updateHud };
+  })();
+
+  /* ==========================================================================
+     7. GAME  (scene assembly, pointer lock, fixed-timestep loop)
+     ========================================================================== */
+  const Game = (() => {
+    const canvas = document.getElementById("game-canvas");
+    let renderer, scene, controls;
+    let running = false;
+    let lastTime = 0;
+    let accumulator = 0; // fixed-timestep accumulator
+
+    function initScene() {
+      renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x9fb8d4);           // dawn sky
+      scene.fog = new THREE.Fog(0x9fb8d4, CONFIG.FOG_NEAR, CONFIG.FOG_FAR);
+
+      // Lighting: hemispheric ambient + a warm directional "sun".
+      const hemi = new THREE.HemisphereLight(0xbcd3ff, 0x4a3f2a, 0.85);
+      scene.add(hemi);
+      const sun = new THREE.DirectionalLight(0xfff2d6, 1.1);
+      sun.position.set(-260, 320, 180);
+      scene.add(sun);
+
+      // World.
+      scene.add(Terrain.build());
+
+      // A few procedural landmark boulders so motion is perceptible on the plain.
+      scatterBoulders(scene, 40);
+
+      // Player rig.
+      scene.add(Player.rig);
+      Player.spawn(0, 0);
+
+      // Pointer-lock camera controls (mouse look). We use the addon only for
+      // robust cross-browser pointer-lock plumbing; look math lives in Player.
+      controls = new PointerLockControls(Player.camera, canvas);
+      document.addEventListener("mousemove", (e) => {
+        if (controls.isLocked) Player.look(e.movementX || 0, e.movementY || 0);
+      });
+      controls.addEventListener("lock", () => { UI.showOverlay(false); Input.reset(); });
+      controls.addEventListener("unlock", () => { UI.showOverlay(true); Input.reset(); });
+
+      window.addEventListener("resize", onResize);
+    }
+
+    /** Deterministically scatter simple rock meshes across the terrain. */
+    function scatterBoulders(scene, count) {
+      const geo = new THREE.IcosahedronGeometry(1, 0);
+      const mat = new THREE.MeshLambertMaterial({ color: 0x6b645c, flatShading: true });
+      // Reuse the seeded PRNG feel via deterministic index-based placement.
+      for (let i = 0; i < count; i++) {
+        const a = i * 2.399963; // golden-angle spread
+        const r = 40 + (i / count) * (Terrain.HALF - 120);
+        const x = Math.cos(a) * r;
+        const z = Math.sin(a) * r;
+        const s = 1.5 + ((i * 37) % 5);
+        const rock = new THREE.Mesh(geo, mat);
+        rock.position.set(x, Terrain.heightAt(x, z) + s * 0.4, z);
+        rock.scale.setScalar(s);
+        rock.rotation.set(i, i * 1.7, i * 0.3);
+        scene.add(rock);
+      }
+    }
+
+    function onResize() {
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      Player.onResize();
+    }
+
+    /**
+     * Main loop. Rendering runs at display refresh; physics is advanced in
+     * fixed FIXED_DT chunks via an accumulator, so the simulation is
+     * frame-rate independent and deterministic.
+     */
+    function frame(now) {
+      if (!running) return;
+      requestAnimationFrame(frame);
+
+      const seconds = now / 1000;
+      let dt = seconds - lastTime;
+      lastTime = seconds;
+      if (dt > CONFIG.MAX_FRAME_DT) dt = CONFIG.MAX_FRAME_DT; // clamp tab-switch spikes
+
+      accumulator += dt;
+      while (accumulator >= CONFIG.FIXED_DT) {
+        Player.step(CONFIG.FIXED_DT, Input.state);
+        accumulator -= CONFIG.FIXED_DT;
+      }
+
+      Player.syncToRig();
+      UI.updateHud(Player.state.position, dt);
+      renderer.render(scene, Player.camera);
+    }
+
+    function start() {
+      if (!running) {
+        running = true;
+        lastTime = performance.now() / 1000;
+        requestAnimationFrame(frame);
+      }
+      controls.lock(); // request pointer lock on user gesture
+    }
+
+    return { initScene, start };
+  })();
+
+  /* ==========================================================================
+     8. BOOTSTRAP
+     ========================================================================== */
+  // WebGL capability check before doing anything heavy.
+  (function checkWebGL() {
+    try {
+      const test = document.createElement("canvas");
+      const gl = test.getContext("webgl") || test.getContext("experimental-webgl");
+      if (!gl) throw new Error("no context");
+    } catch (e) {
+      showFatal("Your browser or device does not support WebGL, which this game requires.",
+                "Try a recent version of Chrome, Firefox, Edge or Safari.");
+      throw e;
+    }
+  })();
+
+  UI.buildInventory();
+  Game.initScene();
+
+  document.getElementById("start-btn").addEventListener("click", () => Game.start());
+  // Clicking anywhere on the canvas after release re-locks the pointer.
+  document.getElementById("game-canvas").addEventListener("click", () => Game.start());
+  // ESC closes the inventory if it is open (pointer-lock also releases on ESC).
+  window.addEventListener("keydown", (e) => { if (e.code === "Escape") UI.closeInventory(); });
+
+  console.log("%cAETHERIA — Milestone 1 ready.", "color:#c9a227;font-weight:bold");
+  </script>
+</body>
+</html>

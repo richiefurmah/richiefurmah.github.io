@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Aetheria — Milestone 2: Combat &amp; Magic</title>
+<!--
+  ============================================================================
+  AETHERIA  —  A high-fantasy, first-person open-world action RPG
+  ----------------------------------------------------------------------------
+  MILESTONE 2 : Combat and Magic  (builds on Milestone 1's foundation)
+    * Melee combat: light attack, charged heavy attack, and blocking
+    * Spellcasting: procedural fireball hurled from the hand
+    * Vitals system: Health, Stamina, and Magicka (regen + costs + gating)
+    * Procedural first-person viewmodel (sword + casting hand) with animation
+    * Training dummies so combat/magic can be tested (they take damage;
+      autonomous enemy AI arrives in Milestone 3)
+    * Fall damage — exercises the Health system organically
+
+  TECH STACK : HTML5 + CSS3 + JavaScript (ES Modules) + Three.js (WebGL)
+  ASSETS     : 100% procedural — no external meshes, textures or audio.
+
+  DETERMINISM / SERVER-AUTHORITY READINESS
+  ----------------------------------------
+  As in Milestone 1, all gameplay simulation (movement, vitals, attack timing,
+  projectile flight, damage resolution) advances on a FIXED TIMESTEP inside a
+  single step() per system. Rendering only *reads* that state. This keeps the
+  simulation frame-rate independent and is the same code a server would run
+  authoritatively once multiplayer is added.
+  ============================================================================
+-->
+<style>
+  :root {
+    --hud-fg: #e9e0c8;
+    --hud-accent: #c9a227;
+    --panel-bg: rgba(18, 16, 12, 0.92);
+    --panel-border: #5a4a24;
+    --hp: #b23b3b;
+    --sp: #4c9a4c;
+    --mp: #3f6fb2;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #0a0d12; color: var(--hud-fg);
+    font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+    cursor: default; user-select: none;
+  }
+  #game-canvas { display: block; width: 100vw; height: 100vh; }
+
+  /* ---- Crosshair -------------------------------------------------------- */
+  #crosshair {
+    position: fixed; top: 50%; left: 50%;
+    width: 18px; height: 18px; transform: translate(-50%, -50%);
+    pointer-events: none; opacity: 0.7; z-index: 10;
+  }
+  #crosshair::before, #crosshair::after { content: ""; position: absolute; background: var(--hud-fg); }
+  #crosshair::before { left: 50%; top: 0; width: 2px; height: 100%; transform: translateX(-50%); }
+  #crosshair::after  { top: 50%; left: 0; height: 2px; width: 100%; transform: translateY(-50%); }
+
+  /* ---- Hit marker (brief flash when a strike/spell connects) ------------ */
+  #hitmarker {
+    position: fixed; top: 50%; left: 50%;
+    width: 26px; height: 26px; transform: translate(-50%, -50%) rotate(45deg);
+    pointer-events: none; z-index: 11; opacity: 0;
+  }
+  #hitmarker::before, #hitmarker::after { content: ""; position: absolute; background: #ffdca0; }
+  #hitmarker::before { left: 50%; top: 0; width: 3px; height: 100%; transform: translateX(-50%); }
+  #hitmarker::after  { top: 50%; left: 0; height: 3px; width: 100%; transform: translateY(-50%); }
+  #hitmarker.show { animation: hm 0.22s ease-out; }
+  @keyframes hm { 0% { opacity: 1; transform: translate(-50%,-50%) rotate(45deg) scale(0.6);} 100% { opacity: 0; transform: translate(-50%,-50%) rotate(45deg) scale(1.3);} }
+
+  /* ---- Vitals bars ------------------------------------------------------ */
+  #vitals {
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+    display: flex; flex-direction: column; gap: 6px; z-index: 10;
+    pointer-events: none; width: min(420px, 70vw);
+  }
+  .bar { position: relative; height: 14px; background: rgba(0,0,0,0.55);
+         border: 1px solid #000; border-radius: 7px; overflow: hidden;
+         box-shadow: 0 1px 4px rgba(0,0,0,0.6); }
+  .bar .fill { position: absolute; inset: 0; transform-origin: left center; transition: transform 0.12s linear; }
+  .bar .txt { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+              font-size: 10px; letter-spacing: 1px; text-shadow: 0 1px 2px #000; }
+  #bar-hp .fill { background: linear-gradient(#d15555, var(--hp)); }
+  #bar-sp .fill { background: linear-gradient(#6fca6f, var(--sp)); }
+  #bar-mp .fill { background: linear-gradient(#5f96d6, var(--mp)); }
+  #bar-mp { height: 11px; }
+
+  /* ---- HUD text --------------------------------------------------------- */
+  #hud {
+    position: fixed; left: 16px; bottom: 14px; font-size: 12px; line-height: 1.5;
+    text-shadow: 0 1px 3px #000; pointer-events: none; z-index: 10; opacity: 0.85;
+  }
+  #hud .stat { color: var(--hud-accent); font-weight: bold; }
+
+  /* ---- Overlay ---------------------------------------------------------- */
+  #overlay {
+    position: fixed; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    background: radial-gradient(ellipse at center, rgba(10,13,18,0.72), rgba(4,5,8,0.96));
+    z-index: 20; transition: opacity 0.4s ease;
+  }
+  #overlay.hidden { opacity: 0; pointer-events: none; }
+  #overlay h1 { font-size: 44px; letter-spacing: 4px; color: var(--hud-accent); text-shadow: 0 2px 12px #000; margin-bottom: 8px; }
+  #overlay .sub { font-size: 15px; opacity: 0.8; margin-bottom: 24px; letter-spacing: 1px; }
+  #overlay .keys { font-size: 13px; opacity: 0.75; line-height: 2.0; }
+  #overlay .keys b { color: var(--hud-fg); }
+  #overlay .cta {
+    margin-top: 24px; padding: 12px 28px; border: 1px solid var(--panel-border);
+    background: var(--panel-bg); color: var(--hud-fg); border-radius: 4px;
+    font-size: 15px; letter-spacing: 2px; cursor: pointer; pointer-events: auto;
+  }
+  #overlay .cta:hover { border-color: var(--hud-accent); color: var(--hud-accent); }
+
+  /* ---- Inventory -------------------------------------------------------- */
+  #inventory {
+    position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+    background: rgba(4, 5, 8, 0.55); z-index: 15;
+  }
+  #inventory.open { display: flex; }
+  #inventory .panel {
+    width: min(680px, 90vw); background: var(--panel-bg); border: 1px solid var(--panel-border);
+    border-radius: 6px; padding: 22px 24px; box-shadow: 0 12px 48px rgba(0,0,0,0.6);
+  }
+  #inventory h2 { color: var(--hud-accent); letter-spacing: 3px; font-size: 20px; margin-bottom: 4px; }
+  #inventory .hint { font-size: 12px; opacity: 0.6; margin-bottom: 16px; }
+  #inv-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  .inv-slot {
+    aspect-ratio: 1 / 1; border: 1px solid #3a3018; border-radius: 4px;
+    background: rgba(40, 34, 20, 0.5); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; font-size: 22px; position: relative;
+  }
+  .inv-slot.empty { color: #4a4230; font-size: 12px; }
+  .inv-slot .label { position: absolute; bottom: 3px; font-size: 9px; opacity: 0.65; }
+  .inv-slot .qty { position: absolute; top: 3px; right: 5px; font-size: 10px; color: var(--hud-accent); }
+
+  /* ---- Fatal error ------------------------------------------------------ */
+  #fatal {
+    position: fixed; inset: 0; display: none; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; padding: 40px;
+    background: #12080a; color: #f0c9c9; z-index: 100; font-size: 15px; line-height: 1.6;
+  }
+  #fatal h2 { color: #e06666; margin-bottom: 12px; letter-spacing: 2px; }
+  #fatal code { display: block; margin-top: 14px; opacity: 0.7; font-size: 12px; }
+
+  /* ---- Damage / death flash -------------------------------------------- */
+  #damage-flash {
+    position: fixed; inset: 0; pointer-events: none; z-index: 12;
+    box-shadow: inset 0 0 160px rgba(160,20,20,0); transition: box-shadow 0.15s;
+  }
+  #damage-flash.hit { box-shadow: inset 0 0 160px rgba(160,20,20,0.7); }
+</style>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+
+  <div id="crosshair"></div>
+  <div id="hitmarker"></div>
+  <div id="damage-flash"></div>
+
+  <div id="vitals">
+    <div class="bar" id="bar-hp"><div class="fill"></div><div class="txt" id="txt-hp">HEALTH</div></div>
+    <div class="bar" id="bar-sp"><div class="fill"></div><div class="txt" id="txt-sp">STAMINA</div></div>
+    <div class="bar" id="bar-mp"><div class="fill"></div><div class="txt" id="txt-mp">MAGICKA</div></div>
+  </div>
+
+  <div id="hud">
+    <div>Altitude: <span class="stat" id="hud-alt">–</span>m &nbsp;·&nbsp; FPS: <span class="stat" id="hud-fps">–</span></div>
+    <div style="opacity:0.7; margin-top:3px;">LMB tap: Light · LMB hold: Heavy · RMB: Block · F: Fireball · I: Inventory</div>
+  </div>
+
+  <div id="inventory">
+    <div class="panel">
+      <h2>INVENTORY</h2>
+      <div class="hint">Placeholder loadout. Press [I] or [ESC] to close.</div>
+      <div id="inv-grid"></div>
+    </div>
+  </div>
+
+  <div id="overlay">
+    <h1>AETHERIA</h1>
+    <div class="sub">Milestone 2 — Combat &amp; Magic</div>
+    <div class="keys">
+      <b>W A S D</b> Move · <b>Mouse</b> Look · <b>Space</b> Jump · <b>Shift</b> Sprint<br />
+      <b>Left-Click</b> Light Attack · <b>Hold Left-Click</b> Heavy Attack · <b>Right-Click</b> Block<br />
+      <b>F</b> Cast Fireball · <b>I</b> Inventory · <b>Esc</b> Release cursor<br />
+      <span style="opacity:0.6">Strike or burn the straw dummies on the plain to test combat.</span>
+    </div>
+    <button class="cta" id="start-btn">CLICK TO ENTER THE WORLD</button>
+  </div>
+
+  <div id="fatal">
+    <h2>THE REALM FAILED TO LOAD</h2>
+    <div id="fatal-msg">An unexpected error occurred.</div>
+    <code id="fatal-detail"></code>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+  "use strict";
+
+  /* ==========================================================================
+     0. GLOBAL ERROR HANDLING
+     ========================================================================== */
+  function showFatal(message, detail) {
+    const el = document.getElementById("fatal");
+    document.getElementById("fatal-msg").textContent = message;
+    document.getElementById("fatal-detail").textContent = detail || "";
+    if (el) el.style.display = "flex";
+    console.error("[Aetheria:FATAL]", message, detail || "");
+  }
+  window.addEventListener("error", (e) =>
+    showFatal("A runtime error stopped the game.", e.message + " @ " + (e.filename || "") + ":" + (e.lineno || "")));
+  window.addEventListener("unhandledrejection", (e) =>
+    showFatal("A module or async task failed.", (e.reason && e.reason.message) || String(e.reason)));
+
+  let THREE, PointerLockControls;
+  try {
+    THREE = await import("three");
+    ({ PointerLockControls } = await import("three/addons/controls/PointerLockControls.js"));
+  } catch (err) {
+    showFatal("Could not load the Three.js engine from the CDN. Check your network connection.", String(err));
+    throw err;
+  }
+
+  /* ==========================================================================
+     1. CONFIGURATION
+     ========================================================================== */
+  const CONFIG = Object.freeze({
+    // Simulation
+    FIXED_DT: 1 / 60, MAX_FRAME_DT: 0.25,
+    // World
+    WORLD_SIZE: 1000, TERRAIN_SEGMENTS: 200, SEED: 1337,
+    MOUNTAIN_HEIGHT: 120, FOG_NEAR: 120, FOG_FAR: 780,
+    // Player physics
+    EYE_HEIGHT: 1.7, WALK_SPEED: 7.0, SPRINT_SPEED: 12.0,
+    ACCEL: 60.0, FRICTION: 10.0, GRAVITY: 24.0, JUMP_SPEED: 8.5, AIR_CONTROL: 0.25,
+    // Camera
+    MOUSE_SENSITIVITY: 0.0022, PITCH_LIMIT: Math.PI / 2 - 0.05, FOV: 75,
+
+    // --- Vitals (Milestone 2) ---
+    MAX_HEALTH: 100, MAX_STAMINA: 100, MAX_MAGICKA: 100,
+    STAMINA_REGEN: 18,   // per second, when not spending
+    STAMINA_REGEN_DELAY: 0.8, // seconds after spending before regen resumes
+    MAGICKA_REGEN: 12,
+    SPRINT_STAMINA_COST: 12, // per second while sprinting & moving
+    HEALTH_REGEN: 2.5,   // slow out-of-combat regen
+    HEALTH_REGEN_DELAY: 4.0,
+
+    // --- Combat (Milestone 2) ---
+    LIGHT_DAMAGE: 14, LIGHT_STAMINA: 12, LIGHT_DURATION: 0.42, LIGHT_HITFRAME: 0.18,
+    HEAVY_DAMAGE: 34, HEAVY_STAMINA: 28, HEAVY_DURATION: 0.72, HEAVY_HITFRAME: 0.34,
+    HEAVY_CHARGE_TIME: 0.28,   // hold LMB beyond this -> heavy
+    MELEE_RANGE: 3.2, MELEE_ARC: Math.cos(Math.PI / 3.2), // dot-product threshold
+    BLOCK_STAMINA_DRAIN: 8,    // per second while actively blocking
+    BLOCK_DAMAGE_REDUCTION: 0.8,
+
+    // --- Magic (Milestone 2) ---
+    FIREBALL_COST: 22, FIREBALL_SPEED: 42, FIREBALL_DAMAGE: 40,
+    FIREBALL_RADIUS: 0.35, FIREBALL_LIFETIME: 3.0, FIREBALL_SPLASH: 3.5, FIREBALL_COOLDOWN: 0.45,
+
+    // --- Fall damage ---
+    FALL_SAFE_SPEED: 14,   // m/s impact below which no damage
+    FALL_DAMAGE_SCALE: 6,  // hp per m/s over the safe threshold
+
+    // --- Dummies ---
+    DUMMY_HEALTH: 100, DUMMY_RESPAWN: 5.0,
+  });
+
+  /* ==========================================================================
+     2. DETERMINISTIC NOISE  (unchanged from Milestone 1)
+     ========================================================================== */
+  const Noise = (() => {
+    function mulberry32(a) {
+      return function () {
+        a |= 0; a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    const rand = mulberry32(CONFIG.SEED);
+    const perm = new Uint8Array(512), p = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) p[i] = i;
+    for (let i = 255; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [p[i], p[j]] = [p[j], p[i]]; }
+    for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
+    const fade = (t) => t * t * t * (t * (t * 6 - 15) + 10);
+    const lerp = (a, b, t) => a + t * (b - a);
+    const hash = (x, y) => perm[(perm[x & 255] + y) & 255] / 255 * 2 - 1;
+    function valueNoise(x, y) {
+      const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+      const u = fade(xf), v = fade(yf);
+      return lerp(lerp(hash(xi, yi), hash(xi + 1, yi), u),
+                  lerp(hash(xi, yi + 1), hash(xi + 1, yi + 1), u), v);
+    }
+    function fbm(x, y, octaves = 5, lacunarity = 2.0, gain = 0.5) {
+      let amp = 1, freq = 1, sum = 0, norm = 0;
+      for (let o = 0; o < octaves; o++) { sum += amp * valueNoise(x * freq, y * freq); norm += amp; amp *= gain; freq *= lacunarity; }
+      return sum / norm;
+    }
+    return { fbm, rand: mulberry32(CONFIG.SEED + 99) };
+  })();
+
+  /* ==========================================================================
+     3. TERRAIN  (unchanged from Milestone 1)
+     ========================================================================== */
+  const Terrain = (() => {
+    const HALF = CONFIG.WORLD_SIZE / 2, NOISE_SCALE = 0.0016;
+    function heightAt(x, z) {
+      let h = Noise.fbm(x * NOISE_SCALE, z * NOISE_SCALE, 5);
+      const dist = Math.sqrt(x * x + z * z) / HALF;
+      const mountainMask = Math.min(1, Math.max(0, (dist - 0.25) / 0.75));
+      const ridged = Math.pow(Math.abs(h), 0.8);
+      return h * 6.0 + ridged * CONFIG.MOUNTAIN_HEIGHT * mountainMask * mountainMask;
+    }
+    function build() {
+      const seg = CONFIG.TERRAIN_SEGMENTS;
+      const geo = new THREE.PlaneGeometry(CONFIG.WORLD_SIZE, CONFIG.WORLD_SIZE, seg, seg);
+      geo.rotateX(-Math.PI / 2);
+      const pos = geo.attributes.position;
+      const colors = new Float32Array(pos.count * 3);
+      const cGrass = new THREE.Color(0x4b6b32), cRock = new THREE.Color(0x6d635a),
+            cSnow = new THREE.Color(0xeef2f5), cDirt = new THREE.Color(0x5c4a30), tmp = new THREE.Color();
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i), z = pos.getZ(i), y = heightAt(x, z);
+        pos.setY(i, y);
+        const t = THREE.MathUtils.clamp(y / CONFIG.MOUNTAIN_HEIGHT, 0, 1);
+        if (t < 0.05)      tmp.copy(cDirt).lerp(cGrass, t / 0.05);
+        else if (t < 0.45) tmp.copy(cGrass).lerp(cRock, (t - 0.05) / 0.40);
+        else               tmp.copy(cRock).lerp(cSnow, (t - 0.45) / 0.55);
+        colors[i * 3] = tmp.r; colors[i * 3 + 1] = tmp.g; colors[i * 3 + 2] = tmp.b;
+      }
+      geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      geo.computeVertexNormals();
+      const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+      mesh.name = "terrain";
+      return mesh;
+    }
+    return { build, heightAt, HALF };
+  })();
+
+  /* ==========================================================================
+     4. INPUT MANAGER  (extended: mouse buttons + fireball)
+     Intents are latched here and consumed by the simulation, so no gameplay
+     decision is made in an event handler.
+     ========================================================================== */
+  const Input = (() => {
+    const keys = Object.create(null);
+    const state = {
+      forward: 0, right: 0, jump: false, sprint: false,
+      // Combat intents:
+      lmbDown: false,      // is left button currently held (for heavy charge)
+      lmbReleaseQueued: false, // a click was released -> resolve attack
+      blocking: false,     // right button held
+      castQueued: false,   // fireball requested
+    };
+    const MAP = {
+      KeyW: "up", ArrowUp: "up", KeyS: "down", ArrowDown: "down",
+      KeyA: "left", ArrowLeft: "left", KeyD: "right", ArrowRight: "right",
+      Space: "jump", ShiftLeft: "sprint", ShiftRight: "sprint",
+    };
+    function refresh() {
+      state.forward = (keys.up ? 1 : 0) - (keys.down ? 1 : 0);
+      state.right   = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+      state.jump    = !!keys.jump;
+      state.sprint  = !!keys.sprint;
+    }
+    window.addEventListener("keydown", (e) => {
+      const a = MAP[e.code];
+      if (a) { keys[a] = true; e.preventDefault(); refresh(); }
+      if (e.code === "KeyI") UI.toggleInventory();
+      if (e.code === "KeyF") state.castQueued = true;
+    });
+    window.addEventListener("keyup", (e) => {
+      const a = MAP[e.code];
+      if (a) { keys[a] = false; e.preventDefault(); refresh(); }
+    });
+    function reset() { for (const k in keys) keys[k] = false; refresh();
+      state.lmbDown = false; state.lmbReleaseQueued = false; state.blocking = false; state.castQueued = false; }
+    return { state, reset };
+  })();
+
+  /* ==========================================================================
+     5. VITALS  (Health / Stamina / Magicka)
+     Pure data + regen logic, stepped at fixed dt. Fully serializable.
+     ========================================================================== */
+  const Vitals = (() => {
+    const state = {
+      health: CONFIG.MAX_HEALTH, stamina: CONFIG.MAX_STAMINA, magicka: CONFIG.MAX_MAGICKA,
+      staminaLock: 0, magickaLock: 0, healthLock: 0, dead: false,
+    };
+    /** Try to spend stamina; returns false (and spends nothing) if insufficient. */
+    function spendStamina(amount) {
+      if (state.stamina < amount) return false;
+      state.stamina -= amount; state.staminaLock = CONFIG.STAMINA_REGEN_DELAY; return true;
+    }
+    function spendMagicka(amount) {
+      if (state.magicka < amount) return false;
+      state.magicka -= amount; state.magickaLock = CONFIG.STAMINA_REGEN_DELAY; return true;
+    }
+    function damage(amount) {
+      if (state.dead) return;
+      state.health = Math.max(0, state.health - amount);
+      state.healthLock = CONFIG.HEALTH_REGEN_DELAY;
+      UI.flashDamage();
+      if (state.health <= 0) { state.dead = true; UI.onPlayerDeath(); }
+    }
+    function step(dt, movingSprint) {
+      // Continuous stamina drain from sprinting.
+      if (movingSprint && state.stamina > 0) {
+        state.stamina = Math.max(0, state.stamina - CONFIG.SPRINT_STAMINA_COST * dt);
+        state.staminaLock = CONFIG.STAMINA_REGEN_DELAY;
+      }
+      // Regen with post-spend delays.
+      state.staminaLock = Math.max(0, state.staminaLock - dt);
+      state.magickaLock = Math.max(0, state.magickaLock - dt);
+      state.healthLock  = Math.max(0, state.healthLock - dt);
+      if (state.staminaLock === 0)
+        state.stamina = Math.min(CONFIG.MAX_STAMINA, state.stamina + CONFIG.STAMINA_REGEN * dt);
+      if (state.magickaLock === 0)
+        state.magicka = Math.min(CONFIG.MAX_MAGICKA, state.magicka + CONFIG.MAGICKA_REGEN * dt);
+      if (state.healthLock === 0 && !state.dead)
+        state.health = Math.min(CONFIG.MAX_HEALTH, state.health + CONFIG.HEALTH_REGEN * dt);
+    }
+    function respawn() {
+      state.health = CONFIG.MAX_HEALTH; state.stamina = CONFIG.MAX_STAMINA;
+      state.magicka = CONFIG.MAX_MAGICKA; state.dead = false;
+    }
+    return { state, spendStamina, spendMagicka, damage, step, respawn };
+  })();
+
+  /* ==========================================================================
+     6. PLAYER  (decoupled camera rig + physics + combat state machine)
+     ========================================================================== */
+  const Player = (() => {
+    const camera = new THREE.PerspectiveCamera(CONFIG.FOV, innerWidth / innerHeight, 0.1, 2000);
+    const pitchObject = new THREE.Object3D(), yawObject = new THREE.Object3D();
+    pitchObject.add(camera); yawObject.add(pitchObject);
+
+    const state = {
+      position: new THREE.Vector3(0, 0, 0),
+      velocity: new THREE.Vector3(0, 0, 0),
+      yaw: 0, pitch: 0, onGround: false,
+      prevVelY: 0, // for fall-damage impact detection
+      // Combat state machine:
+      attackState: "idle",   // idle | swing
+      attackKind: "light",   // light | heavy
+      attackTimer: 0, attackHitDone: false, chargeTime: 0,
+      attackCooldown: 0, castCooldown: 0,
+      blocking: false,
+    };
+
+    const _wish = new THREE.Vector3(), _fwd = new THREE.Vector3(), _right = new THREE.Vector3();
+
+    function spawn(x, z) {
+      state.position.set(x, Terrain.heightAt(x, z) + CONFIG.EYE_HEIGHT, z);
+      state.velocity.set(0, 0, 0); state.onGround = true;
+      state.attackState = "idle"; state.blocking = false;
+    }
+    function look(dx, dy) {
+      state.yaw   -= dx * CONFIG.MOUSE_SENSITIVITY;
+      state.pitch -= dy * CONFIG.MOUSE_SENSITIVITY;
+      state.pitch = THREE.MathUtils.clamp(state.pitch, -CONFIG.PITCH_LIMIT, CONFIG.PITCH_LIMIT);
+    }
+
+    /** Unit forward direction including pitch (for aiming spells / melee). */
+    function forwardDir(out) {
+      const cp = Math.cos(state.pitch);
+      return out.set(-Math.sin(state.yaw) * cp, Math.sin(state.pitch), -Math.cos(state.yaw) * cp).normalize();
+    }
+    /** World position of the caster's hand / weapon origin. */
+    function handOrigin(out) {
+      forwardDir(out);
+      return out.multiplyScalar(0.6).add(state.position).add(new THREE.Vector3(0, -0.25, 0));
+    }
+
+    function step(dt, input) {
+      if (Vitals.state.dead) return;
+
+      // ---- Movement ----
+      _fwd.set(-Math.sin(state.yaw), 0, -Math.cos(state.yaw));
+      _right.set(Math.cos(state.yaw), 0, -Math.sin(state.yaw));
+      _wish.set(0, 0, 0).addScaledVector(_fwd, input.forward).addScaledVector(_right, input.right);
+      if (_wish.lengthSq() > 0) _wish.normalize();
+
+      const moving = _wish.lengthSq() > 0;
+      const wantSprint = input.sprint && moving && Vitals.state.stamina > 1 && !state.blocking;
+      const targetSpeed = wantSprint ? CONFIG.SPRINT_SPEED
+                        : state.blocking ? CONFIG.WALK_SPEED * 0.5 : CONFIG.WALK_SPEED;
+      const control = state.onGround ? 1 : CONFIG.AIR_CONTROL;
+
+      const vh = new THREE.Vector3(state.velocity.x, 0, state.velocity.z);
+      if (state.onGround) {
+        const speed = vh.length();
+        if (speed > 0) { const drop = speed * CONFIG.FRICTION * dt; vh.multiplyScalar(Math.max(speed - drop, 0) / speed); }
+      }
+      vh.addScaledVector(_wish, CONFIG.ACCEL * control * dt);
+      if (vh.length() > targetSpeed) vh.setLength(targetSpeed);
+      state.velocity.x = vh.x; state.velocity.z = vh.z;
+
+      state.prevVelY = state.velocity.y;
+      state.velocity.y -= CONFIG.GRAVITY * dt;
+      if (input.jump && state.onGround && Vitals.spendStamina(10)) {
+        state.velocity.y = CONFIG.JUMP_SPEED; state.onGround = false;
+      }
+      state.position.addScaledVector(state.velocity, dt);
+
+      // ---- Ground collision + fall damage ----
+      const groundY = Terrain.heightAt(state.position.x, state.position.z) + CONFIG.EYE_HEIGHT;
+      const wasAir = !state.onGround;
+      if (state.position.y <= groundY) {
+        state.position.y = groundY;
+        if (wasAir) {
+          const impact = -state.prevVelY; // downward speed at landing
+          if (impact > CONFIG.FALL_SAFE_SPEED)
+            Vitals.damage((impact - CONFIG.FALL_SAFE_SPEED) * CONFIG.FALL_DAMAGE_SCALE);
+        }
+        if (state.velocity.y < 0) state.velocity.y = 0;
+        state.onGround = true;
+      } else state.onGround = false;
+
+      const lim = Terrain.HALF - 2;
+      state.position.x = THREE.MathUtils.clamp(state.position.x, -lim, lim);
+      state.position.z = THREE.MathUtils.clamp(state.position.z, -lim, lim);
+
+      // ---- Vitals ----
+      Vitals.step(dt, wantSprint);
+
+      // ---- Combat state machine ----
+      state.attackCooldown = Math.max(0, state.attackCooldown - dt);
+      state.castCooldown   = Math.max(0, state.castCooldown - dt);
+      state.blocking = input.blocking && state.attackState === "idle";
+      if (state.blocking) {
+        // Blocking slowly drains stamina; if depleted, the guard drops.
+        if (!Vitals.spendStamina(CONFIG.BLOCK_STAMINA_DRAIN * dt)) state.blocking = false;
+      }
+
+      // Charge accumulates while LMB held and idle.
+      if (input.lmbDown && state.attackState === "idle" && !state.blocking)
+        state.chargeTime += dt;
+
+      // Resolve an attack when the button is released.
+      if (input.lmbReleaseQueued) {
+        input.lmbReleaseQueued = false;
+        if (state.attackState === "idle" && state.attackCooldown === 0 && !state.blocking) {
+          const heavy = state.chargeTime >= CONFIG.HEAVY_CHARGE_TIME;
+          const cost  = heavy ? CONFIG.HEAVY_STAMINA : CONFIG.LIGHT_STAMINA;
+          if (Vitals.spendStamina(cost)) {
+            state.attackKind = heavy ? "heavy" : "light";
+            state.attackState = "swing";
+            state.attackTimer = 0; state.attackHitDone = false;
+          }
+        }
+        state.chargeTime = 0;
+      }
+
+      // Advance an in-progress swing and apply damage at the hit frame.
+      if (state.attackState === "swing") {
+        state.attackTimer += dt;
+        const dur      = state.attackKind === "heavy" ? CONFIG.HEAVY_DURATION : CONFIG.LIGHT_DURATION;
+        const hitFrame = state.attackKind === "heavy" ? CONFIG.HEAVY_HITFRAME : CONFIG.LIGHT_HITFRAME;
+        const dmg      = state.attackKind === "heavy" ? CONFIG.HEAVY_DAMAGE   : CONFIG.LIGHT_DAMAGE;
+        if (!state.attackHitDone && state.attackTimer >= hitFrame) {
+          state.attackHitDone = true;
+          Combat.resolveMelee(state.position, forwardDir(new THREE.Vector3()), dmg);
+        }
+        if (state.attackTimer >= dur) {
+          state.attackState = "idle";
+          state.attackCooldown = 0.08;
+        }
+      }
+
+      // ---- Spellcasting ----
+      if (input.castQueued) {
+        input.castQueued = false;
+        if (state.castCooldown === 0 && state.attackState === "idle" && Vitals.spendMagicka(CONFIG.FIREBALL_COST)) {
+          const origin = handOrigin(new THREE.Vector3());
+          const dir = forwardDir(new THREE.Vector3());
+          Projectiles.spawnFireball(origin, dir);
+          state.castCooldown = CONFIG.FIREBALL_COOLDOWN;
+        }
+      }
+    }
+
+    function syncToRig() {
+      yawObject.position.copy(state.position);
+      yawObject.rotation.y = state.yaw;
+      pitchObject.rotation.x = state.pitch;
+    }
+    function onResize() { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+
+    return { camera, rig: yawObject, state, spawn, look, step, syncToRig, onResize, forwardDir, handOrigin };
+  })();
+
+  /* ==========================================================================
+     7. VIEWMODEL  (procedural first-person sword + casting hand)
+     Purely cosmetic: reads Player combat state each render frame and poses
+     the weapon. Attached to the camera so it tracks the view.
+     ========================================================================== */
+  const Viewmodel = (() => {
+    const group = new THREE.Group();
+    let sword, hand, handGlow;
+
+    function build(camera) {
+      // --- Sword (blade + guard + grip) ---
+      sword = new THREE.Group();
+      const blade = new THREE.Mesh(
+        new THREE.BoxGeometry(0.05, 0.9, 0.12),
+        new THREE.MeshStandardMaterial({ color: 0xcfd4dc, metalness: 0.9, roughness: 0.3 }));
+      blade.position.y = 0.55;
+      const guard = new THREE.Mesh(
+        new THREE.BoxGeometry(0.32, 0.06, 0.08),
+        new THREE.MeshStandardMaterial({ color: 0x8a6a2a, metalness: 0.7, roughness: 0.4 }));
+      const grip = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.035, 0.035, 0.26, 8),
+        new THREE.MeshStandardMaterial({ color: 0x3a2a18 }));
+      grip.position.y = -0.15;
+      sword.add(blade, guard, grip);
+      sword.position.set(0.32, -0.34, -0.62);
+      sword.rotation.set(0.2, -0.15, 0.1);
+
+      // --- Casting hand (left) with a charge glow ---
+      hand = new THREE.Mesh(
+        new THREE.SphereGeometry(0.09, 12, 10),
+        new THREE.MeshStandardMaterial({ color: 0xd8b98a, roughness: 0.8 }));
+      hand.position.set(-0.34, -0.36, -0.55);
+      handGlow = new THREE.Mesh(
+        new THREE.SphereGeometry(0.13, 12, 10),
+        new THREE.MeshBasicMaterial({ color: 0xff7b2e, transparent: true, opacity: 0 }));
+      handGlow.position.copy(hand.position);
+
+      group.add(sword, hand, handGlow);
+      camera.add(group); // parent to camera => fixed in view space
+    }
+
+    // Pose the weapon each frame based on the combat state (t in [0,1]).
+    function update() {
+      const s = Player.state;
+      // Sword swing pose.
+      let swing = 0;
+      if (s.attackState === "swing") {
+        const dur = s.attackKind === "heavy" ? CONFIG.HEAVY_DURATION : CONFIG.LIGHT_DURATION;
+        const t = THREE.MathUtils.clamp(s.attackTimer / dur, 0, 1);
+        // Ease: wind-up then fast slash.
+        swing = Math.sin(Math.min(t, 0.5) * Math.PI) * (s.attackKind === "heavy" ? 1.6 : 1.1);
+      }
+      const block = s.blocking ? 1 : 0;
+      const charge = THREE.MathUtils.clamp(s.chargeTime / CONFIG.HEAVY_CHARGE_TIME, 0, 1);
+
+      sword.rotation.x = 0.2 - swing * 1.4 + block * 0.1;
+      sword.rotation.z = 0.1 + swing * 0.5;
+      sword.position.x = 0.32 - block * 0.22 - charge * 0.04;
+      sword.position.y = -0.34 + block * 0.16;
+      sword.position.z = -0.62 + block * 0.12;
+
+      // Casting hand glow pulses with available magicka + cooldown readiness.
+      const ready = Player.state.castCooldown === 0 && Vitals.state.magicka >= CONFIG.FIREBALL_COST;
+      const target = ready ? 0.55 : 0.0;
+      handGlow.material.opacity += (target - handGlow.material.opacity) * 0.15;
+      const pulse = 1 + Math.sin(performance.now() * 0.006) * 0.12 * (ready ? 1 : 0);
+      handGlow.scale.setScalar(pulse);
+    }
+    return { build, update };
+  })();
+
+  /* ==========================================================================
+     8. PROJECTILES  (fireballs)
+     Simulated at fixed dt; each carries a mesh + point light. On impact with
+     terrain, a dummy, or lifetime expiry it detonates (splash damage + FX).
+     ========================================================================== */
+  const Projectiles = (() => {
+    let scene = null;
+    const active = [];
+    const _n = new THREE.Vector3();
+
+    function init(s) { scene = s; }
+
+    function spawnFireball(origin, dir) {
+      const core = new THREE.Mesh(
+        new THREE.SphereGeometry(CONFIG.FIREBALL_RADIUS, 14, 12),
+        new THREE.MeshBasicMaterial({ color: 0xffb347 }));
+      const glow = new THREE.Mesh(
+        new THREE.SphereGeometry(CONFIG.FIREBALL_RADIUS * 2.0, 14, 12),
+        new THREE.MeshBasicMaterial({ color: 0xff5a1e, transparent: true, opacity: 0.4 }));
+      core.add(glow);
+      core.position.copy(origin);
+      const light = new THREE.PointLight(0xff7a2e, 6, 12, 2);
+      core.add(light);
+      scene.add(core);
+      active.push({
+        mesh: core, glow, light,
+        vel: dir.clone().multiplyScalar(CONFIG.FIREBALL_SPEED),
+        life: CONFIG.FIREBALL_LIFETIME, detonating: false, det: 0,
+      });
+    }
+
+    function detonate(p) {
+      p.detonating = true; p.det = 0;
+      // Splash damage to nearby dummies.
+      Combat.resolveSplash(p.mesh.position, CONFIG.FIREBALL_SPLASH, CONFIG.FIREBALL_DAMAGE);
+    }
+
+    function step(dt) {
+      for (let i = active.length - 1; i >= 0; i--) {
+        const p = active[i];
+        if (p.detonating) {
+          // Expanding fading flash, then removal.
+          p.det += dt;
+          const k = p.det / 0.32;
+          p.mesh.scale.setScalar(1 + k * 5);
+          p.glow.material.opacity = Math.max(0, 0.4 * (1 - k));
+          p.mesh.material.opacity = Math.max(0, 1 - k);
+          p.mesh.material.transparent = true;
+          p.light.intensity = Math.max(0, 6 * (1 - k));
+          if (p.det >= 0.32) { scene.remove(p.mesh); active.splice(i, 1); }
+          continue;
+        }
+        // Integrate flight (light gravity for a slight arc).
+        p.vel.y -= CONFIG.GRAVITY * 0.15 * dt;
+        p.mesh.position.addScaledVector(p.vel, dt);
+        p.life -= dt;
+
+        // Terrain collision.
+        const gy = Terrain.heightAt(p.mesh.position.x, p.mesh.position.z);
+        let hit = p.mesh.position.y <= gy + CONFIG.FIREBALL_RADIUS;
+        // Direct dummy collision.
+        if (!hit && Combat.hitAnyDummy(p.mesh.position, CONFIG.FIREBALL_RADIUS + 0.5)) hit = true;
+        if (hit || p.life <= 0) detonate(p);
+      }
+    }
+    return { init, spawnFireball, step };
+  })();
+
+  /* ==========================================================================
+     9. COMBAT / ENTITIES  (training dummies + damage resolution)
+     Dummies are inert targets for Milestone 2 so melee and magic can be
+     verified. Autonomous AI (patrol / attack) is Milestone 3.
+     ========================================================================== */
+  const Combat = (() => {
+    let scene = null;
+    const dummies = [];
+    const _d = new THREE.Vector3();
+
+    function init(s) { scene = s; spawnDummies(); }
+
+    function makeDummy(x, z) {
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.3, 0.42, 1.3, 10),
+        new THREE.MeshLambertMaterial({ color: 0xc7a86b }));
+      body.position.y = 0.95;
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.26, 12, 10),
+        new THREE.MeshLambertMaterial({ color: 0xd8c089 }));
+      head.position.y = 1.85;
+      const post = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.08, 0.08, 0.9, 6),
+        new THREE.MeshLambertMaterial({ color: 0x5a4a30 }));
+      post.position.y = 0.35;
+      g.add(post, body, head);
+      g.position.set(x, Terrain.heightAt(x, z), z);
+      scene.add(g);
+      return { group: g, body, head, x, z, health: CONFIG.DUMMY_HEALTH, dead: false,
+               respawn: 0, flash: 0 };
+    }
+
+    function spawnDummies() {
+      // A small ring of dummies on the starting plain, near spawn.
+      const spots = [[6, -8], [-9, -6], [2, -14], [-4, -18], [12, -16]];
+      for (const [x, z] of spots) dummies.push(makeDummy(x, z));
+    }
+
+    function hurt(d, amount) {
+      if (d.dead) return;
+      d.health -= amount; d.flash = 0.18;
+      UI.showHit();
+      if (d.health <= 0) {
+        d.dead = true; d.respawn = CONFIG.DUMMY_RESPAWN;
+        d.group.rotation.z = Math.PI / 2.2; // topple over
+      }
+    }
+
+    /** Melee: damage the closest dummy inside range and within the swing arc. */
+    function resolveMelee(playerPos, forward, damage) {
+      let best = null, bestDist = Infinity;
+      for (const d of dummies) {
+        if (d.dead) continue;
+        _d.set(d.x - playerPos.x, 0, d.z - playerPos.z);
+        const dist = _d.length();
+        if (dist > CONFIG.MELEE_RANGE) continue;
+        _d.normalize();
+        const facing = _d.x * forward.x + _d.z * forward.z; // ignore Y for arc test
+        if (facing < CONFIG.MELEE_ARC) continue;
+        if (dist < bestDist) { bestDist = dist; best = d; }
+      }
+      if (best) hurt(best, damage);
+    }
+
+    /** Splash: damage every dummy within radius, falling off with distance. */
+    function resolveSplash(pos, radius, damage) {
+      for (const d of dummies) {
+        if (d.dead) continue;
+        const dist = Math.hypot(d.x - pos.x, d.z - pos.z);
+        if (dist <= radius) hurt(d, damage * (1 - dist / radius * 0.6));
+      }
+    }
+
+    /** Used by projectiles for direct-contact detection. */
+    function hitAnyDummy(pos, radius) {
+      for (const d of dummies) {
+        if (d.dead) continue;
+        const dx = d.x - pos.x, dz = d.z - pos.z;
+        const dy = (d.group.position.y + 1.0) - pos.y;
+        if (dx * dx + dz * dz + dy * dy <= radius * radius) return true;
+      }
+      return false;
+    }
+
+    function step(dt) {
+      for (const d of dummies) {
+        if (d.flash > 0) {
+          d.flash -= dt;
+          const k = Math.max(0, d.flash / 0.18);
+          d.body.material.emissive = d.body.material.emissive || new THREE.Color();
+          d.body.material.emissive.setRGB(k, k * 0.4, 0);
+          d.head.material.emissive = d.head.material.emissive || new THREE.Color();
+          d.head.material.emissive.setRGB(k, k * 0.4, 0);
+        }
+        if (d.dead) {
+          d.respawn -= dt;
+          if (d.respawn <= 0) {
+            d.dead = false; d.health = CONFIG.DUMMY_HEALTH;
+            d.group.rotation.z = 0;
+          }
+        }
+      }
+    }
+    return { init, resolveMelee, resolveSplash, hitAnyDummy, step };
+  })();
+
+  /* ==========================================================================
+     10. UI  (overlay, HUD, vitals bars, inventory, feedback)
+     ========================================================================== */
+  const UI = (() => {
+    const overlay = document.getElementById("overlay");
+    const inventory = document.getElementById("inventory");
+    const hudAlt = document.getElementById("hud-alt");
+    const hudFps = document.getElementById("hud-fps");
+    const fills = {
+      hp: document.querySelector("#bar-hp .fill"),
+      sp: document.querySelector("#bar-sp .fill"),
+      mp: document.querySelector("#bar-mp .fill"),
+    };
+    const hitmarker = document.getElementById("hitmarker");
+    const flash = document.getElementById("damage-flash");
+
+    const STARTER_ITEMS = [
+      { icon: "🗡️", name: "Iron Sword", qty: 1 }, { icon: "🛡️", name: "Oak Shield", qty: 1 },
+      { icon: "🔥", name: "Flame Tome", qty: 1 }, { icon: "🧪", name: "Minor Heal", qty: 3 },
+      { icon: "🍖", name: "Rations", qty: 5 }, { icon: "🔑", name: "Rusted Key", qty: 1 },
+    ];
+    const TOTAL_SLOTS = 24;
+    function buildInventory() {
+      const grid = document.getElementById("inv-grid");
+      const frag = document.createDocumentFragment();
+      for (let i = 0; i < TOTAL_SLOTS; i++) {
+        const slot = document.createElement("div");
+        const item = STARTER_ITEMS[i];
+        if (item) {
+          slot.className = "inv-slot";
+          slot.innerHTML = `${item.icon}<span class="label">${item.name}</span>` +
+            (item.qty > 1 ? `<span class="qty">×${item.qty}</span>` : "");
+        } else { slot.className = "inv-slot empty"; }
+        frag.appendChild(slot);
+      }
+      grid.appendChild(frag);
+    }
+
+    let inventoryOpen = false;
+    function toggleInventory() { inventoryOpen = !inventoryOpen; inventory.classList.toggle("open", inventoryOpen); }
+    function closeInventory() { inventoryOpen = false; inventory.classList.remove("open"); }
+    function showOverlay(show) { overlay.classList.toggle("hidden", !show); }
+
+    function showHit() { hitmarker.classList.remove("show"); void hitmarker.offsetWidth; hitmarker.classList.add("show"); }
+    let flashTimer = 0;
+    function flashDamage() { flash.classList.add("hit"); flashTimer = 0.18; }
+
+    function onPlayerDeath() {
+      overlay.querySelector("h1").textContent = "YOU HAVE FALLEN";
+      overlay.querySelector(".sub").textContent = "The realm reclaims the unworthy. Click to rise again.";
+      document.getElementById("start-btn").textContent = "RESPAWN";
+      showOverlay(true);
+    }
+
+    // FPS smoothing.
+    let fpsAcc = 0, fpsFrames = 0, fpsTimer = 0;
+    function updateHud(dt) {
+      const v = Vitals.state;
+      fills.hp.style.transform = `scaleX(${v.health / CONFIG.MAX_HEALTH})`;
+      fills.sp.style.transform = `scaleX(${v.stamina / CONFIG.MAX_STAMINA})`;
+      fills.mp.style.transform = `scaleX(${v.magicka / CONFIG.MAX_MAGICKA})`;
+      document.getElementById("txt-hp").textContent = `HEALTH ${Math.round(v.health)}`;
+      document.getElementById("txt-sp").textContent = `STAMINA ${Math.round(v.stamina)}`;
+      document.getElementById("txt-mp").textContent = `MAGICKA ${Math.round(v.magicka)}`;
+
+      hudAlt.textContent = Player.state.position.y.toFixed(1);
+      fpsAcc += 1 / Math.max(dt, 1e-6); fpsFrames++; fpsTimer += dt;
+      if (fpsTimer >= 0.5) { hudFps.textContent = Math.round(fpsAcc / fpsFrames); fpsAcc = 0; fpsFrames = 0; fpsTimer = 0; }
+
+      if (flashTimer > 0) { flashTimer -= dt; if (flashTimer <= 0) flash.classList.remove("hit"); }
+    }
+    return { buildInventory, toggleInventory, closeInventory, showOverlay, updateHud,
+             showHit, flashDamage, onPlayerDeath };
+  })();
+
+  /* ==========================================================================
+     11. GAME  (scene assembly, pointer lock, fixed-timestep loop)
+     ========================================================================== */
+  const Game = (() => {
+    const canvas = document.getElementById("game-canvas");
+    let renderer, scene, controls, running = false, lastTime = 0, accumulator = 0;
+
+    function initScene() {
+      renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x9fb8d4);
+      scene.fog = new THREE.Fog(0x9fb8d4, CONFIG.FOG_NEAR, CONFIG.FOG_FAR);
+      scene.add(new THREE.HemisphereLight(0xbcd3ff, 0x4a3f2a, 0.85));
+      const sun = new THREE.DirectionalLight(0xfff2d6, 1.1);
+      sun.position.set(-260, 320, 180); scene.add(sun);
+
+      scene.add(Terrain.build());
+      scatterBoulders(scene, 40);
+
+      // Subsystems that need the scene.
+      Projectiles.init(scene);
+      Combat.init(scene);
+
+      scene.add(Player.rig);
+      Player.spawn(0, 0);
+      Viewmodel.build(Player.camera);
+
+      controls = new PointerLockControls(Player.camera, canvas);
+      document.addEventListener("mousemove", (e) => { if (controls.isLocked) Player.look(e.movementX || 0, e.movementY || 0); });
+      controls.addEventListener("lock", () => { UI.showOverlay(false); Input.reset(); });
+      controls.addEventListener("unlock", () => { UI.showOverlay(true); Input.reset(); });
+
+      // Mouse buttons drive combat intents (only while locked / playing).
+      canvas.addEventListener("mousedown", (e) => {
+        if (!controls.isLocked) return;
+        if (e.button === 0) { Input.state.lmbDown = true; }
+        else if (e.button === 2) { Input.state.blocking = true; }
+      });
+      window.addEventListener("mouseup", (e) => {
+        if (e.button === 0 && Input.state.lmbDown) { Input.state.lmbDown = false; Input.state.lmbReleaseQueued = true; }
+        else if (e.button === 2) { Input.state.blocking = false; }
+      });
+      window.addEventListener("contextmenu", (e) => e.preventDefault()); // RMB = block, not menu
+
+      addEventListener("resize", onResize);
+    }
+
+    function scatterBoulders(scene, count) {
+      const geo = new THREE.IcosahedronGeometry(1, 0);
+      const mat = new THREE.MeshLambertMaterial({ color: 0x6b645c, flatShading: true });
+      for (let i = 0; i < count; i++) {
+        const a = i * 2.399963, r = 40 + (i / count) * (Terrain.HALF - 120);
+        const x = Math.cos(a) * r, z = Math.sin(a) * r, s = 1.5 + ((i * 37) % 5);
+        const rock = new THREE.Mesh(geo, mat);
+        rock.position.set(x, Terrain.heightAt(x, z) + s * 0.4, z);
+        rock.scale.setScalar(s); rock.rotation.set(i, i * 1.7, i * 0.3);
+        scene.add(rock);
+      }
+    }
+
+    function onResize() { renderer.setSize(innerWidth, innerHeight); Player.onResize(); }
+
+    function frame(now) {
+      if (!running) return;
+      requestAnimationFrame(frame);
+      const seconds = now / 1000;
+      let dt = seconds - lastTime; lastTime = seconds;
+      if (dt > CONFIG.MAX_FRAME_DT) dt = CONFIG.MAX_FRAME_DT;
+
+      accumulator += dt;
+      while (accumulator >= CONFIG.FIXED_DT) {
+        Player.step(CONFIG.FIXED_DT, Input.state);
+        Projectiles.step(CONFIG.FIXED_DT);
+        Combat.step(CONFIG.FIXED_DT);
+        accumulator -= CONFIG.FIXED_DT;
+      }
+
+      Player.syncToRig();
+      Viewmodel.update();
+      UI.updateHud(dt);
+      renderer.render(scene, Player.camera);
+    }
+
+    function start() {
+      if (Vitals.state.dead) {   // respawn flow
+        Vitals.respawn(); Player.spawn(0, 0);
+        document.querySelector("#overlay h1").textContent = "AETHERIA";
+        document.querySelector("#overlay .sub").textContent = "Milestone 2 — Combat & Magic";
+        document.getElementById("start-btn").textContent = "CLICK TO ENTER THE WORLD";
+      }
+      if (!running) { running = true; lastTime = performance.now() / 1000; requestAnimationFrame(frame); }
+      controls.lock();
+    }
+    return { initScene, start };
+  })();
+
+  /* ==========================================================================
+     12. BOOTSTRAP
+     ========================================================================== */
+  (function checkWebGL() {
+    try {
+      const gl = document.createElement("canvas").getContext("webgl") ||
+                 document.createElement("canvas").getContext("experimental-webgl");
+      if (!gl) throw new Error("no context");
+    } catch (e) {
+      showFatal("Your browser or device does not support WebGL, which this game requires.",
+                "Try a recent version of Chrome, Firefox, Edge or Safari.");
+      throw e;
+    }
+  })();
+
+  UI.buildInventory();
+  Game.initScene();
+
+  document.getElementById("start-btn").addEventListener("click", () => Game.start());
+  document.getElementById("game-canvas").addEventListener("click", () => Game.start());
+  window.addEventListener("keydown", (e) => { if (e.code === "Escape") UI.closeInventory(); });
+
+  console.log("%cAETHERIA — Milestone 2 ready.", "color:#c9a227;font-weight:bold");
+  </script>
+</body>
+</html>

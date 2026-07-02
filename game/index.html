@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dragonreach — Milestone 1: Foundation &amp; Player</title>
+
+<!--
+  ============================================================================
+  DRAGONREACH — A high-fantasy, first-person open-world action RPG
+  ----------------------------------------------------------------------------
+  MILESTONE 1: The Foundation and Player
+    - Decoupled camera + first-person movement (yaw/pitch rig, gravity, jump)
+    - Procedurally generated mountainous, open-plain starter world
+    - Basic inventory screen with placeholder UI
+
+  TECH STACK: HTML5 + CSS3 + JavaScript, Three.js (WebGL) via CDN import map.
+
+  ARCHITECTURE NOTE ON "SERVER-AUTHORITATIVE" LOGIC:
+    GitHub Pages is static hosting; there is no backend to run authoritative
+    simulation. To honour the intent, ALL mutable game state lives in a single
+    authoritative `GameState` object (the client-side source of truth). Systems
+    never mutate their own private copies of shared state — they read from and
+    write through GameState. This is the exact seam a future Node/WebSocket
+    authority would occupy: swap GameState's mutators for network round-trips
+    and the rest of the code is unchanged.
+
+  ASSETS: 100% procedural (no external art). Terrain, sky, and lighting are
+    generated at runtime from a seeded value-noise field.
+  ============================================================================
+-->
+
+<style>
+  /* ------------------------------------------------------------------ *
+   *  Global / layout                                                    *
+   * ------------------------------------------------------------------ */
+  :root {
+    --hud-fg: #eae2c8;
+    --hud-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+    --panel-bg: rgba(18, 14, 10, 0.92);
+    --panel-border: #6b5a36;
+    --accent: #c9a24b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #05060a;
+    font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+    color: var(--hud-fg);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  #game-canvas { display: block; position: fixed; inset: 0; }
+
+  /* ------------------------------------------------------------------ *
+   *  Loading / fatal-error overlays                                     *
+   * ------------------------------------------------------------------ */
+  #boot {
+    position: fixed; inset: 0; z-index: 50;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; padding: 2rem;
+    background: radial-gradient(ellipse at center, #1a1710 0%, #05060a 80%);
+    transition: opacity 0.6s ease;
+  }
+  #boot.hidden { opacity: 0; pointer-events: none; }
+  #boot h1 { font-size: 2.4rem; letter-spacing: 0.35rem; color: var(--accent); text-transform: uppercase; }
+  #boot p  { margin-top: 1rem; opacity: 0.75; max-width: 32rem; line-height: 1.5; }
+  #boot .spinner {
+    margin-top: 1.6rem; width: 34px; height: 34px;
+    border: 3px solid rgba(201, 162, 75, 0.25);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  #boot.error .spinner { display: none; }
+  #boot.error h1 { color: #d9534f; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ------------------------------------------------------------------ *
+   *  "Click to play" pointer-lock prompt                                *
+   * ------------------------------------------------------------------ */
+  #play-prompt {
+    position: fixed; inset: 0; z-index: 40;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(5, 6, 10, 0.55);
+    cursor: pointer;
+    transition: opacity 0.25s ease;
+  }
+  #play-prompt.hidden { display: none; }
+  #play-prompt .card {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    padding: 2rem 3rem;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  }
+  #play-prompt h2 { color: var(--accent); letter-spacing: 0.2rem; margin-bottom: 0.6rem; }
+  #play-prompt .keys { margin-top: 1rem; font-size: 0.9rem; line-height: 1.9; opacity: 0.85; }
+  #play-prompt kbd {
+    display: inline-block; min-width: 1.5rem; padding: 1px 6px;
+    background: #2a2318; border: 1px solid #6b5a36; border-radius: 4px;
+    font-family: inherit; color: #f0e6c8;
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  HUD                                                                 *
+   * ------------------------------------------------------------------ */
+  #hud { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
+
+  #crosshair {
+    position: absolute; top: 50%; left: 50%;
+    width: 18px; height: 18px; transform: translate(-50%, -50%);
+    opacity: 0.7;
+  }
+  #crosshair::before, #crosshair::after {
+    content: ""; position: absolute; background: var(--hud-fg);
+    box-shadow: var(--hud-shadow);
+  }
+  #crosshair::before { left: 50%; top: 0; width: 2px; height: 100%; transform: translateX(-50%); }
+  #crosshair::after  { top: 50%; left: 0; height: 2px; width: 100%; transform: translateY(-50%); }
+
+  #compass {
+    position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+    font-size: 1rem; letter-spacing: 0.25rem; text-shadow: var(--hud-shadow);
+  }
+
+  #telemetry {
+    position: absolute; bottom: 14px; left: 16px;
+    font-size: 0.78rem; line-height: 1.55; text-shadow: var(--hud-shadow);
+    opacity: 0.85; font-variant-numeric: tabular-nums;
+  }
+  #telemetry b { color: var(--accent); font-weight: 600; }
+
+  #hint {
+    position: absolute; bottom: 16px; right: 16px;
+    font-size: 0.78rem; text-shadow: var(--hud-shadow); opacity: 0.7;
+    text-align: right; line-height: 1.7;
+  }
+  #hint kbd {
+    display: inline-block; padding: 0 5px; background: #2a2318;
+    border: 1px solid #6b5a36; border-radius: 3px; color: #f0e6c8;
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  Inventory screen (placeholder UI)                                  *
+   * ------------------------------------------------------------------ */
+  #inventory {
+    position: fixed; inset: 0; z-index: 30;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(5, 6, 10, 0.6); backdrop-filter: blur(3px);
+  }
+  #inventory.open { display: flex; }
+  #inventory .frame {
+    width: min(880px, 92vw); height: min(560px, 88vh);
+    display: flex; flex-direction: column;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+  }
+  #inventory header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 1rem 1.4rem; border-bottom: 1px solid var(--panel-border);
+  }
+  #inventory header h2 { color: var(--accent); letter-spacing: 0.2rem; text-transform: uppercase; font-size: 1.2rem; }
+  #inventory header .weight { font-size: 0.85rem; opacity: 0.8; font-variant-numeric: tabular-nums; }
+
+  #inventory .body { flex: 1; display: flex; min-height: 0; }
+
+  #inv-grid {
+    flex: 1; padding: 1.2rem;
+    display: grid; gap: 10px;
+    grid-template-columns: repeat(6, 1fr);
+    grid-auto-rows: min-content;
+    overflow-y: auto;
+  }
+  .slot {
+    position: relative; aspect-ratio: 1;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid #4c4026; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: border-color 0.12s, transform 0.12s;
+  }
+  .slot:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .slot.filled { background: rgba(60, 48, 24, 0.5); }
+  .slot .glyph { font-size: 1.9rem; }
+  .slot .qty {
+    position: absolute; right: 4px; bottom: 2px;
+    font-size: 0.72rem; color: #f0e6c8; text-shadow: var(--hud-shadow);
+  }
+  .slot.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+
+  #inv-detail {
+    width: 240px; flex-shrink: 0;
+    border-left: 1px solid var(--panel-border);
+    padding: 1.2rem; display: flex; flex-direction: column;
+  }
+  #inv-detail .glyph-lg { font-size: 3rem; text-align: center; margin-bottom: 0.6rem; }
+  #inv-detail h3 { color: var(--accent); margin-bottom: 0.4rem; }
+  #inv-detail .type { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.15rem; opacity: 0.6; margin-bottom: 0.8rem; }
+  #inv-detail .desc { font-size: 0.85rem; line-height: 1.5; opacity: 0.85; }
+  #inv-detail .empty { margin: auto; opacity: 0.4; font-style: italic; }
+
+  #inventory footer {
+    padding: 0.7rem 1.4rem; border-top: 1px solid var(--panel-border);
+    font-size: 0.75rem; opacity: 0.6; text-align: center;
+  }
+</style>
+</head>
+
+<body>
+  <!-- WebGL render target -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- Boot / error overlay -->
+  <div id="boot">
+    <h1>Dragonreach</h1>
+    <p id="boot-msg">Forging the mountains of the North…</p>
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Pointer-lock prompt -->
+  <div id="play-prompt" class="hidden">
+    <div class="card">
+      <h2>Dragonreach</h2>
+      <div>Click to enter the world</div>
+      <div class="keys">
+        <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move &nbsp;·&nbsp; <kbd>Mouse</kbd> Look<br />
+        <kbd>Shift</kbd> Sprint &nbsp;·&nbsp; <kbd>Space</kbd> Jump<br />
+        <kbd>I</kbd> Inventory &nbsp;·&nbsp; <kbd>Esc</kbd> Release cursor
+      </div>
+    </div>
+  </div>
+
+  <!-- Heads-up display -->
+  <div id="hud">
+    <div id="crosshair"></div>
+    <div id="compass">N</div>
+    <div id="telemetry">
+      <div>Pos <b id="t-pos">0, 0, 0</b></div>
+      <div>Alt <b id="t-alt">0</b>m &nbsp; Biome <b id="t-biome">—</b></div>
+      <div><b id="t-fps">0</b> FPS</div>
+    </div>
+    <div id="hint">
+      <kbd>I</kbd> Inventory &nbsp; <kbd>Shift</kbd> Sprint<br />
+      <kbd>Esc</kbd> Release cursor
+    </div>
+  </div>
+
+  <!-- Inventory (placeholder) -->
+  <div id="inventory">
+    <div class="frame">
+      <header>
+        <h2>Inventory</h2>
+        <span class="weight">Weight <span id="inv-weight">0</span> / <span id="inv-weight-max">300</span></span>
+      </header>
+      <div class="body">
+        <div id="inv-grid"></div>
+        <div id="inv-detail"><div class="empty">Select an item</div></div>
+      </div>
+      <footer>Press <kbd>I</kbd> or <kbd>Esc</kbd> to close · Milestone 1 placeholder — equipping arrives in Milestone 2</footer>
+    </div>
+  </div>
+
+  <!-- Three.js via import map (pinned version, CDN-hosted) -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+  /* ====================================================================== *
+   *  IMPORTS                                                                *
+   * ====================================================================== */
+  import * as THREE from "three";
+  import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
+
+  /* ====================================================================== *
+   *  0. FATAL-ERROR PLUMBING                                                *
+   *     Any unrecoverable failure surfaces on the boot overlay rather than  *
+   *     failing silently to a black screen.                                 *
+   * ====================================================================== */
+  const boot = document.getElementById("boot");
+  const bootMsg = document.getElementById("boot-msg");
+
+  function fatal(title, detail) {
+    boot.classList.remove("hidden");
+    boot.classList.add("error");
+    boot.querySelector("h1").textContent = title;
+    bootMsg.textContent = detail;
+    console.error("[Dragonreach] FATAL:", title, "—", detail);
+  }
+
+  window.addEventListener("error", (e) =>
+    fatal("A rift has opened", e.message || "Unknown runtime error."));
+  window.addEventListener("unhandledrejection", (e) =>
+    fatal("A rift has opened", (e.reason && e.reason.message) || "Async failure — check the console."));
+
+  // WebGL capability check before we commit to Three.js.
+  (function assertWebGL() {
+    try {
+      const c = document.createElement("canvas");
+      const gl = c.getContext("webgl2") || c.getContext("webgl");
+      if (!gl) throw new Error("no context");
+    } catch (_) {
+      fatal("WebGL unavailable", "Your browser or GPU does not support WebGL. Try a recent desktop Chrome, Firefox, or Edge.");
+      throw new Error("WebGL unsupported — halting boot.");
+    }
+  })();
+
+  /* ====================================================================== *
+   *  1. CONFIG — all tunables in one authoritative place                    *
+   * ====================================================================== */
+  const CONFIG = Object.freeze({
+    world: {
+      size: 800,        // metres across the playable plane
+      segments: 200,    // heightmap resolution (segments x segments quads)
+      seed: 1337,       // deterministic terrain seed
+      maxHeight: 140,   // amplitude of the tallest peaks
+      mountainRingStart: 0.55, // radial fraction where the mountain wall begins
+      fogNear: 120,
+      fogFar: 620,
+    },
+    player: {
+      eyeHeight: 1.7,   // camera height above the ground (metres)
+      walkSpeed: 6.5,   // m/s
+      sprintSpeed: 11.0,
+      accel: 12.0,      // ground acceleration factor
+      gravity: 24.0,    // m/s^2 (snappier than Earth for game feel)
+      jumpSpeed: 8.5,   // initial vertical velocity on jump
+      startXZ: [0, 0],  // spawn on the central plain
+    },
+    render: {
+      fov: 72,
+      near: 0.1,
+      far: 1000,
+      maxPixelRatio: 2, // clamp DPR so 4K/retina still holds 60 FPS
+    },
+  });
+
+  /* ====================================================================== *
+   *  2. GameState — THE authoritative source of truth                       *
+   *     Every system reads/writes here. Swap these mutators for network     *
+   *     calls to make the game truly server-authoritative later.            *
+   * ====================================================================== */
+  const GameState = {
+    // --- player kinematics (metres, metres/second) ---
+    player: {
+      position: new THREE.Vector3(CONFIG.player.startXZ[0], 0, CONFIG.player.startXZ[1]),
+      velocity: new THREE.Vector3(0, 0, 0),
+      onGround: false,
+      yaw: 0,   // radians, for the compass
+    },
+
+    // --- UI flags ---
+    ui: { inventoryOpen: false, pointerLocked: false },
+
+    // --- inventory: authoritative item list + capacity ---
+    inventory: {
+      maxWeight: 300,
+      selected: null,
+      items: [
+        { id: "sword_iron",   name: "Iron Sword",        glyph: "🗡️", type: "Weapon",     qty: 1, weight: 12, desc: "A plain but reliable blade. Bandits fear it slightly." },
+        { id: "potion_health",name: "Draught of Vigor",  glyph: "🧪", type: "Consumable", qty: 5, weight: 1,  desc: "Restores health. Tastes of iron and pine." },
+        { id: "bread",        name: "Traveler's Bread",  glyph: "🍞", type: "Food",       qty: 3, weight: 1,  desc: "Stale, but it keeps the cold at bay." },
+        { id: "torch",        name: "Pine Torch",        glyph: "🔥", type: "Utility",    qty: 2, weight: 2,  desc: "Wards off the dark in ruined barrows." },
+        { id: "gold",         name: "Gold Septims",      glyph: "🪙", type: "Currency",   qty: 47, weight: 0, desc: "The coin of the realm. Never enough of it." },
+        { id: "key_rusty",    name: "Rusted Key",        glyph: "🗝️", type: "Quest",      qty: 1, weight: 0, desc: "Opens... something. You have forgotten what." },
+      ],
+    },
+
+    /** Total carried weight (derived, never stored). */
+    totalWeight() {
+      return this.inventory.items.reduce((sum, it) => sum + it.weight * it.qty, 0);
+    },
+  };
+
+  /* ====================================================================== *
+   *  3. PROCEDURAL TERRAIN — seeded value noise (no external assets)        *
+   * ====================================================================== */
+
+  /** Mulberry32: tiny deterministic PRNG so the world is identical each run. */
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a |= 0; a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  /**
+   * 2-D value noise with a hashed lattice. Deterministic for a given seed.
+   * Returns a value in roughly [0, 1].
+   */
+  function makeNoise2D(seed) {
+    const rand = mulberry32(seed);
+    const perm = new Uint8Array(512);
+    const p = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) p[i] = i;
+    for (let i = 255; i > 0; i--) {          // Fisher–Yates shuffle
+      const j = Math.floor(rand() * (i + 1));
+      [p[i], p[j]] = [p[j], p[i]];
+    }
+    for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
+
+    const fade = (t) => t * t * t * (t * (t * 6 - 15) + 10); // smootherstep
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const grad = (h) => (perm[h & 255] / 255);               // lattice value in [0,1]
+
+    return function (x, y) {
+      const xi = Math.floor(x) & 255, yi = Math.floor(y) & 255;
+      const xf = x - Math.floor(x), yf = y - Math.floor(y);
+      const u = fade(xf), v = fade(yf);
+      const aa = grad(perm[xi] + yi),       ab = grad(perm[xi] + yi + 1);
+      const ba = grad(perm[xi + 1] + yi),   bb = grad(perm[xi + 1] + yi + 1);
+      return lerp(lerp(aa, ba, u), lerp(ab, bb, u), v);
+    };
+  }
+
+  /**
+   * Fractal Brownian motion — stacks octaves of value noise for natural relief.
+   */
+  function makeHeightField(cfg) {
+    const noise = makeNoise2D(cfg.seed);
+    const half = cfg.size / 2;
+
+    /**
+     * World-space height sampler. Shared by BOTH the mesh builder and the
+     * player collision code so what you see is exactly what you stand on.
+     * @param {number} x world X (metres)
+     * @param {number} z world Z (metres)
+     * @returns {number} ground height (metres)
+     */
+    return function heightAt(x, z) {
+      // Normalised radial distance from centre [0..~1] for the mountain ring.
+      const dist = Math.sqrt(x * x + z * z) / half;
+
+      // --- fBm rolling hills across the plain ---
+      let amp = 1, freq = 1 / 130, sum = 0, norm = 0;
+      for (let o = 0; o < 5; o++) {
+        sum += amp * noise(x * freq + 100, z * freq + 100);
+        norm += amp;
+        amp *= 0.5; freq *= 2.0;
+      }
+      let h = (sum / norm) * 22; // gentle hills up to ~22 m
+
+      // --- mountain ring: raise terrain sharply past a radial threshold ---
+      if (dist > cfg.mountainRingStart) {
+        const t = Math.min(1, (dist - cfg.mountainRingStart) / (1 - cfg.mountainRingStart));
+        const ridge = noise(x * 0.008 + 7, z * 0.008 + 7);   // large-scale ridgeline
+        h += Math.pow(t, 2.2) * cfg.maxHeight * (0.55 + 0.9 * ridge);
+      }
+
+      return h;
+    };
+  }
+
+  /* ====================================================================== *
+   *  4. ENGINE — renderer, scene, camera, world mesh                        *
+   * ====================================================================== */
+  const canvas = document.getElementById("game-canvas");
+
+  let renderer, scene, camera, controls, heightAt, sun;
+  const clock = new THREE.Clock();
+
+  function buildEngine() {
+    // --- renderer ---
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.render.maxPixelRatio));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    // --- scene + atmosphere ---
+    scene = new THREE.Scene();
+    const skyTop = new THREE.Color(0x6ea8d8), skyHaze = new THREE.Color(0xcdd8dc);
+    scene.background = skyHaze.clone();
+    scene.fog = new THREE.Fog(skyHaze.getHex(), CONFIG.world.fogNear, CONFIG.world.fogFar);
+
+    // --- camera (the "eye"; movement rig is the PointerLockControls object) ---
+    camera = new THREE.PerspectiveCamera(
+      CONFIG.render.fov, window.innerWidth / window.innerHeight,
+      CONFIG.render.near, CONFIG.render.far);
+
+    // --- lighting: hemisphere ambient + directional sun with shadows ---
+    const hemi = new THREE.HemisphereLight(0xbfd6ef, 0x4a4030, 0.9);
+    scene.add(hemi);
+
+    sun = new THREE.DirectionalLight(0xfff4d6, 1.5);
+    sun.position.set(180, 260, 120);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.near = 10;
+    sun.shadow.camera.far = 900;
+    sun.shadow.camera.left = -300; sun.shadow.camera.right = 300;
+    sun.shadow.camera.top = 300;   sun.shadow.camera.bottom = -300;
+    sun.shadow.bias = -0.0004;
+    scene.add(sun);
+    scene.add(sun.target);
+
+    // --- procedural terrain mesh ---
+    heightAt = makeHeightField(CONFIG.world);
+    scene.add(buildTerrainMesh(CONFIG.world, heightAt));
+
+    // --- a scatter of procedural boulders + conifers for parallax/scale ---
+    scene.add(buildScatter(CONFIG.world, heightAt));
+
+    // --- first-person controls: the rig owns yaw+pitch, decoupled from movement ---
+    controls = new PointerLockControls(camera, document.body);
+    scene.add(controls.getObject());
+  }
+
+  /**
+   * Builds the terrain mesh by displacing a subdivided plane with the shared
+   * height field, then colouring vertices by altitude/slope (grass→rock→snow).
+   */
+  function buildTerrainMesh(cfg, heightFn) {
+    const geo = new THREE.PlaneGeometry(cfg.size, cfg.size, cfg.segments, cfg.segments);
+    geo.rotateX(-Math.PI / 2); // lay flat: XZ ground plane, Y up
+
+    const pos = geo.attributes.position;
+    const colors = new Float32Array(pos.count * 3);
+
+    const cGrass = new THREE.Color(0x4a6b32);
+    const cRock  = new THREE.Color(0x6b6459);
+    const cSnow  = new THREE.Color(0xeef2f6);
+    const cDirt  = new THREE.Color(0x5a4a30);
+    const tmp = new THREE.Color();
+
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), z = pos.getZ(i);
+      const h = heightFn(x, z);
+      pos.setY(i, h);
+
+      // Altitude-based blend with a little dirt at the shoreline of the plain.
+      if (h < 3)          tmp.copy(cDirt).lerp(cGrass, h / 3);
+      else if (h < 45)    tmp.copy(cGrass).lerp(cRock, (h - 3) / 42);
+      else if (h < 95)    tmp.copy(cRock).lerp(cSnow, (h - 45) / 50);
+      else                tmp.copy(cSnow);
+
+      colors[i * 3] = tmp.r; colors[i * 3 + 1] = tmp.g; colors[i * 3 + 2] = tmp.b;
+    }
+
+    geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    geo.computeVertexNormals(); // correct lighting after displacement
+
+    const mat = new THREE.MeshStandardMaterial({
+      vertexColors: true, roughness: 0.95, metalness: 0.0, flatShading: false,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.receiveShadow = true;
+    mesh.name = "terrain";
+    return mesh;
+  }
+
+  /**
+   * Procedurally scatters low-poly boulders and conifer "trees" (cone + trunk)
+   * across the plain using the world seed. Instanced-free but low-count so it
+   * stays comfortably within the 60 FPS budget.
+   */
+  function buildScatter(cfg, heightFn) {
+    const group = new THREE.Group();
+    group.name = "scatter";
+    const rand = mulberry32(cfg.seed ^ 0x9e3779b9);
+    const half = cfg.size / 2;
+
+    const rockGeo = new THREE.IcosahedronGeometry(1, 0);
+    const rockMat = new THREE.MeshStandardMaterial({ color: 0x726b5f, roughness: 1, flatShading: true });
+    const trunkGeo = new THREE.CylinderGeometry(0.18, 0.28, 2.2, 5);
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a3423, roughness: 1 });
+    const leafGeo = new THREE.ConeGeometry(1.4, 4.2, 6);
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x2f4a28, roughness: 1, flatShading: true });
+
+    const COUNT = 260;
+    for (let i = 0; i < COUNT; i++) {
+      const x = (rand() * 2 - 1) * half * 0.9;
+      const z = (rand() * 2 - 1) * half * 0.9;
+      const y = heightFn(x, z);
+
+      if (y > 60) continue; // keep the high snowline bare
+
+      if (rand() < 0.45) {
+        // boulder
+        const s = 0.6 + rand() * 2.6;
+        const rock = new THREE.Mesh(rockGeo, rockMat);
+        rock.position.set(x, y + s * 0.4, z);
+        rock.scale.set(s, s * (0.7 + rand() * 0.5), s);
+        rock.rotation.set(rand() * 3, rand() * 6, rand() * 3);
+        rock.castShadow = true; rock.receiveShadow = true;
+        group.add(rock);
+      } else {
+        // conifer
+        const tree = new THREE.Group();
+        const trunk = new THREE.Mesh(trunkGeo, trunkMat); trunk.position.y = 1.1;
+        const leaf = new THREE.Mesh(leafGeo, leafMat); leaf.position.y = 3.4;
+        trunk.castShadow = leaf.castShadow = true;
+        tree.add(trunk, leaf);
+        const s = 0.7 + rand() * 1.1;
+        tree.scale.setScalar(s);
+        tree.position.set(x, y, z);
+        group.add(tree);
+      }
+    }
+    return group;
+  }
+
+  /* ====================================================================== *
+   *  5. PLAYER CONTROLLER — decoupled from the camera rig                   *
+   *     Input → intent → GameState kinematics → apply to the rig.           *
+   * ====================================================================== */
+  const input = { forward: false, back: false, left: false, right: false, sprint: false, jump: false };
+
+  function bindInput() {
+    const set = (code, val) => {
+      switch (code) {
+        case "KeyW": case "ArrowUp":    input.forward = val; break;
+        case "KeyS": case "ArrowDown":  input.back = val; break;
+        case "KeyA": case "ArrowLeft":  input.left = val; break;
+        case "KeyD": case "ArrowRight": input.right = val; break;
+        case "ShiftLeft": case "ShiftRight": input.sprint = val; break;
+        case "Space": input.jump = val; break;
+      }
+    };
+
+    document.addEventListener("keydown", (e) => {
+      // Inventory toggle (works whether or not the pointer is locked).
+      if (e.code === "KeyI") { e.preventDefault(); toggleInventory(); return; }
+      if (GameState.ui.inventoryOpen) return; // swallow movement while in menus
+      set(e.code, true);
+    });
+    document.addEventListener("keyup", (e) => set(e.code, false));
+
+    // Losing the window should stop all motion (avoids "stuck key" drift).
+    window.addEventListener("blur", () => {
+      for (const k in input) input[k] = false;
+    });
+  }
+
+  /**
+   * Advances player kinematics by dt seconds and writes the authoritative
+   * position back into GameState, then mirrors it onto the camera rig.
+   * Camera ORIENTATION is owned by PointerLockControls (decoupled); this
+   * function only ever touches POSITION + physics.
+   */
+  const _forwardDir = new THREE.Vector3();
+  const _rightDir = new THREE.Vector3();
+  const _wish = new THREE.Vector3();
+
+  function updatePlayer(dt) {
+    const P = GameState.player;
+    const rig = controls.getObject();
+
+    // --- derive horizontal basis from where the camera is looking (yaw only) ---
+    controls.getDirection(_forwardDir);       // unit vector camera faces
+    _forwardDir.y = 0; _forwardDir.normalize();
+    _rightDir.set(_forwardDir.z, 0, -_forwardDir.x); // right = 90° CW of forward
+
+    // --- build desired horizontal move direction from input ---
+    _wish.set(0, 0, 0);
+    if (input.forward) _wish.add(_forwardDir);
+    if (input.back)    _wish.sub(_forwardDir);
+    if (input.right)   _wish.add(_rightDir);
+    if (input.left)    _wish.sub(_rightDir);
+
+    const speed = input.sprint ? CONFIG.player.sprintSpeed : CONFIG.player.walkSpeed;
+    if (_wish.lengthSq() > 0) _wish.normalize().multiplyScalar(speed);
+
+    // --- smooth horizontal velocity toward the wish (accel/decel) ---
+    const k = Math.min(1, CONFIG.player.accel * dt);
+    P.velocity.x += (_wish.x - P.velocity.x) * k;
+    P.velocity.z += (_wish.z - P.velocity.z) * k;
+
+    // --- gravity + jump (vertical) ---
+    P.velocity.y -= CONFIG.player.gravity * dt;
+    if (input.jump && P.onGround) {
+      P.velocity.y = CONFIG.player.jumpSpeed;
+      P.onGround = false;
+    }
+
+    // --- integrate position ---
+    P.position.x += P.velocity.x * dt;
+    P.position.y += P.velocity.y * dt;
+    P.position.z += P.velocity.z * dt;
+
+    // --- keep the player inside the playable plane ---
+    const bound = CONFIG.world.size / 2 - 4;
+    P.position.x = THREE.MathUtils.clamp(P.position.x, -bound, bound);
+    P.position.z = THREE.MathUtils.clamp(P.position.z, -bound, bound);
+
+    // --- ground collision against the SHARED height field ---
+    const ground = heightAt(P.position.x, P.position.z) + CONFIG.player.eyeHeight;
+    if (P.position.y <= ground) {
+      P.position.y = ground;
+      P.velocity.y = 0;
+      P.onGround = true;
+    } else {
+      P.onGround = false;
+    }
+
+    // --- mirror authoritative position onto the camera rig ---
+    rig.position.copy(P.position);
+
+    // --- keep sun shadow frustum centred on the player (crisp shadows) ---
+    sun.position.set(P.position.x + 180, P.position.y + 260, P.position.z + 120);
+    sun.target.position.copy(P.position);
+
+    // --- record yaw for the compass ---
+    P.yaw = Math.atan2(_forwardDir.x, _forwardDir.z);
+  }
+
+  /* ====================================================================== *
+   *  6. INVENTORY UI (placeholder) — renders from GameState                 *
+   * ====================================================================== */
+  const invEl = document.getElementById("inventory");
+  const gridEl = document.getElementById("inv-grid");
+  const detailEl = document.getElementById("inv-detail");
+
+  function renderInventory() {
+    const { items, maxWeight, selected } = GameState.inventory;
+    document.getElementById("inv-weight").textContent = GameState.totalWeight();
+    document.getElementById("inv-weight-max").textContent = maxWeight;
+
+    gridEl.innerHTML = "";
+    const TOTAL_SLOTS = 24; // fixed placeholder grid
+    for (let i = 0; i < TOTAL_SLOTS; i++) {
+      const item = items[i];
+      const slot = document.createElement("div");
+      slot.className = "slot" + (item ? " filled" : "") + (selected === i ? " selected" : "");
+      if (item) {
+        slot.innerHTML = `<span class="glyph">${item.glyph}</span>` +
+          (item.qty > 1 ? `<span class="qty">${item.qty}</span>` : "");
+        slot.addEventListener("click", () => { GameState.inventory.selected = i; renderInventory(); });
+      }
+      gridEl.appendChild(slot);
+    }
+
+    // detail pane
+    const sel = selected != null ? items[selected] : null;
+    detailEl.innerHTML = sel
+      ? `<div class="glyph-lg">${sel.glyph}</div><h3>${sel.name}</h3>` +
+        `<div class="type">${sel.type} · ${sel.weight}·wt</div><p class="desc">${sel.desc}</p>`
+      : `<div class="empty">Select an item</div>`;
+  }
+
+  function toggleInventory() {
+    const open = !GameState.ui.inventoryOpen;
+    GameState.ui.inventoryOpen = open;
+    invEl.classList.toggle("open", open);
+    if (open) {
+      if (controls.isLocked) controls.unlock(); // free the cursor for the menu
+      renderInventory();
+    } else if (!GameState.ui.pointerLocked) {
+      // returning to the world — re-show the play prompt so the user re-locks
+      playPrompt.classList.remove("hidden");
+    }
+  }
+
+  /* ====================================================================== *
+   *  7. POINTER-LOCK & MENU FLOW                                            *
+   * ====================================================================== */
+  const playPrompt = document.getElementById("play-prompt");
+
+  function bindPointerLock() {
+    playPrompt.addEventListener("click", () => {
+      if (!GameState.ui.inventoryOpen) controls.lock();
+    });
+    controls.addEventListener("lock", () => {
+      GameState.ui.pointerLocked = true;
+      playPrompt.classList.add("hidden");
+    });
+    controls.addEventListener("unlock", () => {
+      GameState.ui.pointerLocked = false;
+      // Only re-prompt if we're not sitting in the inventory menu.
+      if (!GameState.ui.inventoryOpen) playPrompt.classList.remove("hidden");
+    });
+  }
+
+  /* ====================================================================== *
+   *  8. HUD updates (throttled)                                             *
+   * ====================================================================== */
+  const tPos = document.getElementById("t-pos");
+  const tAlt = document.getElementById("t-alt");
+  const tBiome = document.getElementById("t-biome");
+  const tFps = document.getElementById("t-fps");
+  const compass = document.getElementById("compass");
+
+  const DIRS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+  let hudAccum = 0, frameCount = 0, fps = 0;
+
+  function updateHUD(dt) {
+    frameCount++; hudAccum += dt;
+    if (hudAccum < 0.25) return; // refresh 4×/second — cheap
+    fps = Math.round(frameCount / hudAccum);
+    frameCount = 0; hudAccum = 0;
+
+    const P = GameState.player;
+    tPos.textContent = `${P.position.x.toFixed(0)}, ${P.position.y.toFixed(0)}, ${P.position.z.toFixed(0)}`;
+    const alt = P.position.y - CONFIG.player.eyeHeight;
+    tAlt.textContent = alt.toFixed(0);
+    tBiome.textContent = alt > 60 ? "Snowpeak" : alt > 22 ? "Highland" : "Plain";
+    tFps.textContent = fps;
+
+    // compass from yaw
+    let deg = (P.yaw * 180 / Math.PI + 360) % 360;
+    compass.textContent = DIRS[Math.round(deg / 45) % 8];
+  }
+
+  /* ====================================================================== *
+   *  9. RESIZE                                                              *
+   * ====================================================================== */
+  function bindResize() {
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.render.maxPixelRatio));
+    });
+  }
+
+  /* ====================================================================== *
+   *  10. MAIN LOOP — fixed-ish, dt-clamped for stable 60 FPS               *
+   * ====================================================================== */
+  function loop() {
+    requestAnimationFrame(loop);
+    // Clamp dt so an alt-tab / GC hitch can't hurl the player through terrain.
+    const dt = Math.min(clock.getDelta(), 0.05);
+
+    if (!GameState.ui.inventoryOpen && controls.isLocked) {
+      updatePlayer(dt);
+    }
+    updateHUD(dt);
+    renderer.render(scene, camera);
+  }
+
+  /* ====================================================================== *
+   *  11. BOOT                                                               *
+   * ====================================================================== */
+  function start() {
+    try {
+      buildEngine();
+
+      // Spawn the player on the ground at the configured plain location.
+      const P = GameState.player;
+      P.position.y = heightAt(P.position.x, P.position.z) + CONFIG.player.eyeHeight;
+      controls.getObject().position.copy(P.position);
+
+      bindInput();
+      bindPointerLock();
+      bindResize();
+
+      // Reveal the world; show the "click to play" prompt.
+      boot.classList.add("hidden");
+      playPrompt.classList.remove("hidden");
+
+      loop();
+      console.info("[Dragonreach] Milestone 1 ready. Click to play.");
+    } catch (err) {
+      fatal("The forge failed", err.message || String(err));
+      throw err;
+    }
+  }
+
+  start();
+  </script>
+</body>
+</html>

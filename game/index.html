@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Dragonreach — Milestone 1: Foundation &amp; Player</title>
+<title>Dragonreach — Milestone 2: Combat &amp; Magic</title>
 
 <!--
   ============================================================================
@@ -13,6 +13,13 @@
     - Decoupled camera + first-person movement (yaw/pitch rig, gravity, jump)
     - Procedurally generated mountainous, open-plain starter world
     - Basic inventory screen with placeholder UI
+
+  MILESTONE 2: Combat and Magic
+    - Melee combat: light attack (tap), heavy attack (hold+release), block (hold)
+    - Spellcasting: hurl fireballs from the hand (projectile + AoE explosion)
+    - Health / Stamina / Magicka tracking with regen, costs, and HUD bars
+    - Procedural training dummies (one spars back) + fall damage so every
+      new system is testable before enemy AI arrives in Milestone 3
 
   TECH STACK: HTML5 + CSS3 + JavaScript, Three.js (WebGL) via CDN import map.
 
@@ -149,6 +156,67 @@
   }
 
   /* ------------------------------------------------------------------ *
+   *  Vitals bars (Health / Stamina / Magicka)                          *
+   * ------------------------------------------------------------------ */
+  #vitals {
+    position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
+    display: flex; flex-direction: column; gap: 6px; width: min(360px, 46vw);
+  }
+  .bar {
+    position: relative; height: 12px; border-radius: 7px;
+    background: rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(0, 0, 0, 0.6);
+    box-shadow: var(--hud-shadow); overflow: hidden;
+  }
+  .bar > .fill {
+    position: absolute; inset: 0; transform-origin: left center;
+    transform: scaleX(1); transition: transform 0.12s linear;
+  }
+  .bar > .label {
+    position: absolute; inset: 0; display: flex; align-items: center;
+    padding-left: 8px; font-size: 0.62rem; letter-spacing: 0.14rem;
+    text-transform: uppercase; text-shadow: 0 1px 2px #000; opacity: 0.9;
+  }
+  #bar-health .fill  { background: linear-gradient(90deg, #7a1f1f, #d1453b); }
+  #bar-stamina .fill { background: linear-gradient(90deg, #35631f, #7bc148); }
+  #bar-magicka .fill { background: linear-gradient(90deg, #23407a, #4f8ff0); }
+  .bar.exhausted > .fill { filter: saturate(0.3) brightness(0.7); }
+
+  /* Charge meter for the heavy attack */
+  #charge {
+    position: absolute; left: 50%; top: calc(50% + 22px); transform: translateX(-50%);
+    width: 80px; height: 4px; border-radius: 3px; background: rgba(0,0,0,0.5);
+    overflow: hidden; opacity: 0; transition: opacity 0.1s;
+  }
+  #charge.show { opacity: 0.9; }
+  #charge > .c-fill { position: absolute; inset: 0; width: 0%; background: var(--accent); }
+  #charge.ready > .c-fill { background: #ff7a2f; box-shadow: 0 0 8px #ff7a2f; }
+
+  /* Block vignette + low-health damage vignette */
+  #vignette {
+    position: absolute; inset: 0; pointer-events: none;
+    box-shadow: inset 0 0 120px 20px rgba(0, 0, 0, 0);
+    transition: box-shadow 0.15s ease; mix-blend-mode: multiply;
+  }
+  #vignette.blocking { box-shadow: inset 0 0 90px 30px rgba(90, 120, 200, 0.35); }
+  #hurt {
+    position: absolute; inset: 0; pointer-events: none; opacity: 0;
+    background: radial-gradient(ellipse at center, rgba(160,0,0,0) 40%, rgba(160,0,0,0.55) 100%);
+    transition: opacity 0.4s ease;
+  }
+  #hurt.flash { opacity: 1; transition: opacity 0s; }
+
+  /* Floating damage numbers (world-projected) */
+  #damage-layer { position: absolute; inset: 0; overflow: hidden; }
+  .dmg {
+    position: absolute; transform: translate(-50%, -50%);
+    font-weight: 700; font-size: 1rem; color: #ffd66b;
+    text-shadow: 0 2px 4px #000; will-change: transform, opacity;
+  }
+  .dmg.crit { color: #ff8a3d; font-size: 1.35rem; }
+  .dmg.player { color: #ff5b5b; }
+
+  /* ------------------------------------------------------------------ *
    *  Inventory screen (placeholder UI)                                  *
    * ------------------------------------------------------------------ */
   #inventory {
@@ -234,23 +302,33 @@
       <div class="keys">
         <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move &nbsp;·&nbsp; <kbd>Mouse</kbd> Look<br />
         <kbd>Shift</kbd> Sprint &nbsp;·&nbsp; <kbd>Space</kbd> Jump<br />
-        <kbd>I</kbd> Inventory &nbsp;·&nbsp; <kbd>Esc</kbd> Release cursor
+        <kbd>LMB</kbd> Light Attack &nbsp;·&nbsp; <kbd>Hold&nbsp;LMB</kbd> Heavy &nbsp;·&nbsp; <kbd>RMB</kbd> Block<br />
+        <kbd>F</kbd> Cast Fireball &nbsp;·&nbsp; <kbd>I</kbd> Inventory &nbsp;·&nbsp; <kbd>Esc</kbd> Release cursor
       </div>
     </div>
   </div>
 
   <!-- Heads-up display -->
   <div id="hud">
+    <div id="vignette"></div>
+    <div id="hurt"></div>
+    <div id="damage-layer"></div>
     <div id="crosshair"></div>
+    <div id="charge"><div class="c-fill"></div></div>
     <div id="compass">N</div>
     <div id="telemetry">
       <div>Pos <b id="t-pos">0, 0, 0</b></div>
       <div>Alt <b id="t-alt">0</b>m &nbsp; Biome <b id="t-biome">—</b></div>
       <div><b id="t-fps">0</b> FPS</div>
     </div>
+    <div id="vitals">
+      <div class="bar" id="bar-health"><div class="fill"></div><div class="label">Health</div></div>
+      <div class="bar" id="bar-stamina"><div class="fill"></div><div class="label">Stamina</div></div>
+      <div class="bar" id="bar-magicka"><div class="fill"></div><div class="label">Magicka</div></div>
+    </div>
     <div id="hint">
-      <kbd>I</kbd> Inventory &nbsp; <kbd>Shift</kbd> Sprint<br />
-      <kbd>Esc</kbd> Release cursor
+      <kbd>LMB</kbd> Light &nbsp; <kbd>Hold LMB</kbd> Heavy &nbsp; <kbd>RMB</kbd> Block<br />
+      <kbd>F</kbd> Fireball &nbsp; <kbd>Shift</kbd> Sprint &nbsp; <kbd>I</kbd> Inventory
     </div>
   </div>
 
@@ -269,12 +347,13 @@
     </div>
   </div>
 
-  <!-- Three.js via import map (pinned version, CDN-hosted) -->
+  <!-- Three.js r160, vendored locally so the game is fully self-contained
+       (no runtime CDN dependency — robust for static GitHub Pages hosting). -->
   <script type="importmap">
   {
     "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      "three": "./vendor/three/three.module.js",
+      "three/addons/": "./vendor/three/addons/"
     }
   }
   </script>
@@ -347,6 +426,32 @@
       far: 1000,
       maxPixelRatio: 2, // clamp DPR so 4K/retina still holds 60 FPS
     },
+
+    // --- Milestone 2: resource pools (units are abstract "points") ---
+    stats: {
+      maxHealth: 100,  healthRegen: 2.5,  healthRegenDelay: 5.0,
+      maxStamina: 100, staminaRegen: 20,  staminaRegenDelay: 0.8, sprintDrain: 12,
+      maxMagicka: 100, magickaRegen: 12,  magickaRegenDelay: 1.2,
+      fallSafeSpeed: 13,   // m/s impact below which no fall damage
+      fallDamageScale: 6,  // damage per m/s over the safe threshold
+    },
+
+    // --- Milestone 2: melee combat tuning ---
+    combat: {
+      lightDamage: 14, lightStamina: 12, lightDuration: 0.42, lightReach: 3.2,
+      heavyDamage: 34, heavyStamina: 28, heavyDuration: 0.85, heavyReach: 3.9,
+      heavyChargeTime: 0.32,  // hold LMB this long to release a heavy
+      swingArcCos: 0.5,       // hit cone half-angle (~60°) via dot-product test
+      blockMitigation: 0.8,   // fraction of damage negated while guarding
+      blockStaminaPerDmg: 0.7,// stamina spent per point of blocked damage
+    },
+
+    // --- Milestone 2: fireball spell tuning ---
+    magic: {
+      fireballCost: 30, fireballSpeed: 42, fireballDamage: 36,
+      fireballLife: 2.4, fireballRadius: 4.5, // AoE explosion radius (m)
+      castCooldown: 0.45,
+    },
   });
 
   /* ====================================================================== *
@@ -361,7 +466,23 @@
       velocity: new THREE.Vector3(0, 0, 0),
       onGround: false,
       yaw: 0,   // radians, for the compass
+
+      // --- Milestone 2: vitals (authoritative resource pools) ---
+      health: CONFIG.stats.maxHealth,
+      stamina: CONFIG.stats.maxStamina,
+      magicka: CONFIG.stats.maxMagicka,
+      healthIdle: 0, staminaIdle: 0, magickaIdle: 0, // seconds since last spend
+      alive: true,
+
+      // --- Milestone 2: combat state ---
+      blocking: false,
+      charging: false, chargeT: 0,           // heavy-attack charge timer
+      attack: { active: false, type: null, t: 0, dur: 0, reach: 0, dmg: 0, hit: false },
+      castCd: 0,                             // spell cooldown remaining
     },
+
+    // --- Milestone 2: dynamic entities (dummies, projectiles, VFX) ---
+    entities: { dummies: [], projectiles: [], effects: [] },
 
     // --- UI flags ---
     ui: { inventoryOpen: false, pointerLocked: false },
@@ -521,6 +642,12 @@
     // --- first-person controls: the rig owns yaw+pitch, decoupled from movement ---
     controls = new PointerLockControls(camera, document.body);
     scene.add(controls.getObject());
+
+    // --- Milestone 2: first-person viewmodel (sword + casting hand) ---
+    buildViewmodel();
+
+    // --- Milestone 2: procedural training dummies to fight & burn ---
+    spawnDummies();
   }
 
   /**
@@ -639,6 +766,8 @@
       // Inventory toggle (works whether or not the pointer is locked).
       if (e.code === "KeyI") { e.preventDefault(); toggleInventory(); return; }
       if (GameState.ui.inventoryOpen) return; // swallow movement while in menus
+      // Cast fireball (Milestone 2) — only when playing.
+      if (e.code === "KeyF" && controls.isLocked) { castFireball(); return; }
       set(e.code, true);
     });
     document.addEventListener("keyup", (e) => set(e.code, false));
@@ -646,6 +775,44 @@
     // Losing the window should stop all motion (avoids "stuck key" drift).
     window.addEventListener("blur", () => {
       for (const k in input) input[k] = false;
+      const P = GameState.player;
+      P.blocking = false; P.charging = false; P.chargeT = 0; // drop combat holds
+    });
+
+    bindCombatInput();
+  }
+
+  /**
+   * Milestone 2 combat input:
+   *   LMB tap            → light attack
+   *   LMB hold + release → heavy attack (charged past heavyChargeTime)
+   *   RMB hold           → block
+   * Only active while the pointer is locked and the menu is closed.
+   */
+  function bindCombatInput() {
+    // Suppress the browser context menu so RMB can be "block".
+    document.addEventListener("contextmenu", (e) => e.preventDefault());
+
+    document.addEventListener("mousedown", (e) => {
+      if (!controls.isLocked || GameState.ui.inventoryOpen) return;
+      const P = GameState.player;
+      if (e.button === 0) {            // LMB → begin a swing charge
+        if (!P.blocking) { P.charging = true; P.chargeT = 0; }
+      } else if (e.button === 2) {     // RMB → raise guard
+        if (!P.attack.active) P.blocking = true;
+      }
+    });
+
+    document.addEventListener("mouseup", (e) => {
+      const P = GameState.player;
+      if (e.button === 0 && P.charging) {
+        P.charging = false;
+        const type = P.chargeT >= CONFIG.combat.heavyChargeTime ? "heavy" : "light";
+        startAttack(type);
+        P.chargeT = 0;
+      } else if (e.button === 2) {
+        P.blocking = false;
+      }
     });
   }
 
@@ -675,7 +842,10 @@
     if (input.right)   _wish.add(_rightDir);
     if (input.left)    _wish.sub(_rightDir);
 
-    const speed = input.sprint ? CONFIG.player.sprintSpeed : CONFIG.player.walkSpeed;
+    // Sprinting requires stamina; blocking slows you to a guarded walk.
+    const canSprint = input.sprint && GameState.player.stamina > 1 && !GameState.player.blocking;
+    let speed = canSprint ? CONFIG.player.sprintSpeed : CONFIG.player.walkSpeed;
+    if (GameState.player.blocking) speed *= 0.55;
     if (_wish.lengthSq() > 0) _wish.normalize().multiplyScalar(speed);
 
     // --- smooth horizontal velocity toward the wish (accel/decel) ---
@@ -702,7 +872,14 @@
 
     // --- ground collision against the SHARED height field ---
     const ground = heightAt(P.position.x, P.position.z) + CONFIG.player.eyeHeight;
+    const wasAirborne = !P.onGround;
     if (P.position.y <= ground) {
+      // Fall damage: convert excess downward impact speed into health loss.
+      if (wasAirborne) {
+        const impact = -P.velocity.y; // positive when descending
+        const over = impact - CONFIG.stats.fallSafeSpeed;
+        if (over > 0) damagePlayer(over * CONFIG.stats.fallDamageScale, { blockable: false });
+      }
       P.position.y = ground;
       P.velocity.y = 0;
       P.onGround = true;
@@ -719,6 +896,490 @@
 
     // --- record yaw for the compass ---
     P.yaw = Math.atan2(_forwardDir.x, _forwardDir.z);
+  }
+
+  /* ====================================================================== *
+   *  5b. MILESTONE 2 — VIEWMODEL (first-person sword + casting hand)        *
+   *      Parented to the camera so it renders in view space and inherits    *
+   *      the decoupled yaw/pitch for free.                                   *
+   * ====================================================================== */
+  let vmSword, vmHand, vmHandGlow;      // viewmodel parts
+  const vmRest = new THREE.Vector3(0.34, -0.32, -0.62); // sword rest pose (view space)
+
+  function buildViewmodel() {
+    const vm = new THREE.Group();
+    vm.name = "viewmodel";
+
+    // --- sword: blade + crossguard + grip, all procedural boxes ---
+    vmSword = new THREE.Group();
+    const blade = new THREE.Mesh(
+      new THREE.BoxGeometry(0.05, 0.9, 0.012),
+      new THREE.MeshStandardMaterial({ color: 0xd8dde3, metalness: 0.8, roughness: 0.3 }));
+    blade.position.y = 0.55;
+    const guard = new THREE.Mesh(
+      new THREE.BoxGeometry(0.24, 0.05, 0.05),
+      new THREE.MeshStandardMaterial({ color: 0x8a6a2e, metalness: 0.6, roughness: 0.5 }));
+    guard.position.y = 0.11;
+    const grip = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.028, 0.028, 0.2, 8),
+      new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.9 }));
+    vmSword.add(blade, guard, grip);
+    vmSword.position.copy(vmRest);
+    vmSword.rotation.set(0.1, 0.2, 0.15);
+
+    // --- casting hand: a stylised fist that glows when channelling magicka ---
+    vmHand = new THREE.Group();
+    const palm = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 0.14, 0.1),
+      new THREE.MeshStandardMaterial({ color: 0xc79a6d, roughness: 0.8 }));
+    vmHandGlow = new THREE.PointLight(0xff7a2f, 0, 3);   // intensity ramps while casting
+    vmHand.add(palm, vmHandGlow);
+    vmHand.position.set(-0.32, -0.34, -0.55);
+
+    vm.add(vmSword, vmHand);
+    camera.add(vm);          // <-- render in first person
+    vm.traverse((o) => (o.frustumCulled = false));
+  }
+
+  /**
+   * Animates the viewmodel: idle bob when moving, swing arcs during attacks,
+   * a guarding pose while blocking, and hand-glow while a cast is fresh.
+   */
+  let vmBob = 0;
+  function updateViewmodel(dt) {
+    if (!vmSword) return;
+    const P = GameState.player;
+    const A = P.attack;
+
+    // subtle walk bob
+    const moving = Math.abs(P.velocity.x) + Math.abs(P.velocity.z) > 0.5 && P.onGround;
+    vmBob += dt * (moving ? 9 : 3);
+    const bobY = moving ? Math.sin(vmBob) * 0.012 : 0;
+    const bobX = moving ? Math.cos(vmBob * 0.5) * 0.010 : 0;
+
+    let px = vmRest.x + bobX, py = vmRest.y + bobY, pz = vmRest.z;
+    let rx = 0.1, ry = 0.2, rz = 0.15;
+
+    if (P.blocking) {
+      // raise the blade across the body
+      px = 0.05; py = -0.18; pz = -0.5; rx = 0.2; ry = -0.9; rz = 0.7;
+    } else if (A.active) {
+      // swing arc: wind up then slash down/across, eased by attack progress
+      const u = A.t / A.dur;               // 0..1 through the swing
+      const swing = Math.sin(Math.min(1, u * 1.15) * Math.PI); // 0→1→0
+      if (A.type === "heavy") {
+        rx = 0.1 - swing * 2.4;            // big overhead chop
+        rz = 0.15 + swing * 0.3;
+        py = vmRest.y + swing * 0.15;
+      } else {
+        ry = 0.2 + swing * 1.9;            // quick horizontal slash
+        rx = 0.1 - swing * 0.6;
+      }
+    } else if (P.charging) {
+      // pull the blade back proportional to charge
+      const c = Math.min(1, P.chargeT / CONFIG.combat.heavyChargeTime);
+      rx = 0.1 + c * 0.7; pz = vmRest.z + c * 0.12; py = vmRest.y - c * 0.05;
+    }
+
+    vmSword.position.set(px, py, pz);
+    vmSword.rotation.set(rx, ry, rz);
+
+    // hand glow decays after a cast
+    vmHandGlow.intensity = Math.max(0, vmHandGlow.intensity - dt * 12);
+  }
+
+  /* ====================================================================== *
+   *  5c. MILESTONE 2 — TRAINING DUMMIES                                     *
+   *      Destructible procedural targets. One "sparring" dummy strikes back  *
+   *      on a fixed cadence (a metronome, NOT pathfinding AI — that is       *
+   *      Milestone 3) so blocking and player health are testable now.        *
+   * ====================================================================== */
+  const DUMMY_MAX_HP = 120;
+
+  function makeDummyMesh() {
+    const g = new THREE.Group();
+    const wood = new THREE.MeshStandardMaterial({ color: 0x5a3f24, roughness: 1 });
+    const straw = new THREE.MeshStandardMaterial({ color: 0xb79a52, roughness: 1 });
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 2.0, 8), wood);
+    post.position.y = 1.0;
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.28, 1.0, 10), straw);
+    body.position.y = 1.5;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.26, 10, 8), straw);
+    head.position.y = 2.25;
+    const arms = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.16, 0.16), wood);
+    arms.position.y = 1.8;
+    g.add(post, body, head, arms);
+    g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    return g;
+  }
+
+  function spawnDummies() {
+    // Placed on the plain a short walk from spawn so the player finds them fast.
+    const layout = [
+      { x: 6, z: -8, spar: false },
+      { x: -7, z: -10, spar: false },
+      { x: 0, z: -14, spar: true },   // this one hits back
+    ];
+    for (const L of layout) {
+      const mesh = makeDummyMesh();
+      const y = heightAt(L.x, L.z);
+      mesh.position.set(L.x, y, L.z);
+      scene.add(mesh);
+      GameState.entities.dummies.push({
+        mesh, hp: DUMMY_MAX_HP, maxHp: DUMMY_MAX_HP,
+        pos: new THREE.Vector3(L.x, y + 1.4, L.z), // torso centre for hit tests
+        baseY: y, hitFlash: 0, dead: false, respawn: 0,
+        spar: L.spar, strikeT: 2.5 + Math.random() * 2, telegraph: 0,
+      });
+    }
+  }
+
+  const _toDummy = new THREE.Vector3();
+  const _camPos = new THREE.Vector3();
+
+  function updateDummies(dt) {
+    const P = GameState.player;
+    controls.getObject().getWorldPosition(_camPos);
+
+    for (const d of GameState.entities.dummies) {
+      // --- respawn timer for felled dummies ---
+      if (d.dead) {
+        d.respawn -= dt;
+        if (d.respawn <= 0) reviveDummy(d);
+        else { d.mesh.rotation.z = Math.min(Math.PI / 2, d.mesh.rotation.z + dt * 3); }
+        continue;
+      }
+
+      // --- hit flash decay (red tint + recoil) ---
+      if (d.hitFlash > 0) {
+        d.hitFlash = Math.max(0, d.hitFlash - dt);
+        const f = d.hitFlash / 0.2;
+        d.mesh.children.forEach((c) => c.material.emissive && c.material.emissive.setRGB(f, 0, 0));
+        d.mesh.rotation.x = f * 0.15;
+      }
+
+      // --- sparring metronome: telegraph, then strike if player is close/front ---
+      if (d.spar) {
+        _toDummy.copy(d.pos).sub(_camPos); _toDummy.y = 0;
+        const dist = _toDummy.length();
+        if (dist < 3.6) {
+          d.strikeT -= dt;
+          if (d.telegraph > 0) {
+            d.telegraph -= dt;
+            d.mesh.rotation.z = Math.sin((0.4 - d.telegraph) * 12) * 0.25; // wind-up wobble
+            if (d.telegraph <= 0) {
+              // resolve the strike: blockable frontal damage
+              damagePlayer(15, { blockable: true });
+              d.mesh.rotation.z = 0;
+              d.strikeT = 3.2 + Math.random() * 1.5;
+            }
+          } else if (d.strikeT <= 0) {
+            d.telegraph = 0.4; // begin wind-up
+          }
+        }
+      }
+    }
+  }
+
+  function reviveDummy(d) {
+    d.dead = false; d.hp = d.maxHp; d.hitFlash = 0;
+    d.mesh.rotation.set(0, 0, 0);
+    d.mesh.visible = true;
+    d.mesh.position.y = d.baseY;
+    d.mesh.children.forEach((c) => c.material.emissive && c.material.emissive.setRGB(0, 0, 0));
+  }
+
+  function damageDummy(d, amount, crit) {
+    if (d.dead) return;
+    d.hp -= amount;
+    d.hitFlash = 0.2;
+    spawnDamageNumber(d.pos, Math.round(amount), crit, false);
+    if (d.hp <= 0) {
+      d.dead = true; d.respawn = 5.0;      // topple, then rise again in 5s
+      d.mesh.children.forEach((c) => c.material.emissive && c.material.emissive.setRGB(0, 0, 0));
+    }
+  }
+
+  /* ====================================================================== *
+   *  5d. MILESTONE 2 — MELEE COMBAT                                         *
+   * ====================================================================== */
+
+  /** Begins a swing of the given type, spending stamina. */
+  function startAttack(type) {
+    const P = GameState.player, C = CONFIG.combat;
+    if (P.attack.active || P.blocking || !P.alive) return;
+    const cost = type === "heavy" ? C.heavyStamina : C.lightStamina;
+    if (P.stamina < cost) return;         // too winded to swing
+    spendStamina(cost);
+    Object.assign(P.attack, {
+      active: true, type, t: 0, hit: false,
+      dur: type === "heavy" ? C.heavyDuration : C.lightDuration,
+      reach: type === "heavy" ? C.heavyReach : C.lightReach,
+      dmg: type === "heavy" ? C.heavyDamage : C.lightDamage,
+    });
+  }
+
+  const _fwd = new THREE.Vector3();
+  const _d = new THREE.Vector3();
+
+  function updateCombat(dt) {
+    const P = GameState.player, A = P.attack;
+
+    // --- charge tracking for the heavy attack (LMB held) ---
+    if (P.charging) P.chargeT += dt;
+
+    if (!A.active) return;
+    A.t += dt;
+
+    // Apply damage once, on the active frame (mid-swing) via a hit-cone test.
+    if (!A.hit && A.t >= A.dur * 0.4) {
+      A.hit = true;
+      controls.getObject().getWorldPosition(_camPos);
+      controls.getDirection(_fwd); _fwd.y = 0; _fwd.normalize();
+
+      for (const d of GameState.entities.dummies) {
+        if (d.dead) continue;
+        _d.copy(d.pos).sub(_camPos); _d.y = 0;
+        const dist = _d.length();
+        if (dist > A.reach) continue;
+        _d.normalize();
+        if (_fwd.dot(_d) < CONFIG.combat.swingArcCos) continue; // outside the cone
+        const crit = A.type === "heavy";
+        damageDummy(d, A.dmg, crit);
+      }
+    }
+
+    if (A.t >= A.dur) A.active = false;    // swing complete
+  }
+
+  /* ====================================================================== *
+   *  5e. MILESTONE 2 — FIREBALL SPELL (projectiles + AoE explosions)        *
+   * ====================================================================== */
+  const _spawnPos = new THREE.Vector3();
+  const _castDir = new THREE.Vector3();
+
+  function castFireball() {
+    const P = GameState.player, M = CONFIG.magic;
+    if (P.castCd > 0 || P.blocking || !P.alive || P.stamina < 0) return;
+    if (P.magicka < M.fireballCost) return;
+    spendMagicka(M.fireballCost);
+    P.castCd = M.castCooldown;
+    vmHandGlow.intensity = 2.4;            // flash the casting hand
+
+    // Spawn from the hand, fly along the camera aim (full 3D, includes pitch).
+    controls.getObject().getWorldPosition(_camPos);
+    controls.getDirection(_castDir).normalize();
+    _spawnPos.copy(_camPos).addScaledVector(_castDir, 0.8).add(new THREE.Vector3(0, -0.2, 0));
+
+    const core = new THREE.Mesh(
+      new THREE.SphereGeometry(0.22, 12, 10),
+      new THREE.MeshBasicMaterial({ color: 0xffb347 }));
+    core.position.copy(_spawnPos);
+    const light = new THREE.PointLight(0xff7a2f, 4, 12);
+    core.add(light);
+    scene.add(core);
+
+    GameState.entities.projectiles.push({
+      mesh: core,
+      vel: _castDir.clone().multiplyScalar(M.fireballSpeed),
+      life: M.fireballLife,
+    });
+  }
+
+  const _pd = new THREE.Vector3();
+  function updateProjectiles(dt) {
+    const list = GameState.entities.projectiles;
+    for (let i = list.length - 1; i >= 0; i--) {
+      const p = list[i];
+      p.life -= dt;
+      p.mesh.position.addScaledVector(p.vel, dt);
+      p.mesh.rotation.x += dt * 8;
+
+      const pos = p.mesh.position;
+      const groundH = heightAt(pos.x, pos.z);
+      let detonate = p.life <= 0 || pos.y <= groundH;
+
+      // proximity fuse against dummies
+      if (!detonate) {
+        for (const d of GameState.entities.dummies) {
+          if (d.dead) continue;
+          if (_pd.copy(d.pos).sub(pos).lengthSq() < 1.4 * 1.4) { detonate = true; break; }
+        }
+      }
+
+      if (detonate) {
+        explode(pos.clone());
+        scene.remove(p.mesh);
+        p.mesh.geometry.dispose();
+        list.splice(i, 1);
+      }
+    }
+  }
+
+  /** AoE fire burst: damages dummies (and the caster if too close) + spawns VFX. */
+  function explode(pos) {
+    const M = CONFIG.magic;
+    // damage dummies with linear falloff
+    for (const d of GameState.entities.dummies) {
+      if (d.dead) continue;
+      const dist = _pd.copy(d.pos).sub(pos).length();
+      if (dist <= M.fireballRadius) {
+        const dmg = M.fireballDamage * (1 - dist / M.fireballRadius);
+        if (dmg > 1) damageDummy(d, dmg, true);
+      }
+    }
+    // self-damage if you fireball your own feet (demonstrates Health intake)
+    controls.getObject().getWorldPosition(_camPos);
+    const selfDist = _camPos.distanceTo(pos);
+    if (selfDist <= M.fireballRadius) {
+      damagePlayer(M.fireballDamage * 0.5 * (1 - selfDist / M.fireballRadius), { blockable: false });
+    }
+
+    // --- visual: expanding translucent fire sphere + bright, fading light ---
+    const flash = new THREE.Mesh(
+      new THREE.SphereGeometry(0.6, 16, 12),
+      new THREE.MeshBasicMaterial({ color: 0xff6a2a, transparent: true, opacity: 0.9 }));
+    flash.position.copy(pos);
+    const light = new THREE.PointLight(0xff5a1a, 8, 20);
+    light.position.copy(pos);
+    scene.add(flash, light);
+    GameState.entities.effects.push({ flash, light, t: 0, dur: 0.45, maxR: M.fireballRadius });
+  }
+
+  function updateEffects(dt) {
+    const list = GameState.entities.effects;
+    for (let i = list.length - 1; i >= 0; i--) {
+      const e = list[i];
+      e.t += dt;
+      const u = e.t / e.dur;               // 0..1
+      e.flash.scale.setScalar(1 + u * e.maxR);
+      e.flash.material.opacity = 0.9 * (1 - u);
+      e.light.intensity = 8 * (1 - u);
+      if (e.t >= e.dur) {
+        scene.remove(e.flash, e.light);
+        e.flash.geometry.dispose(); e.flash.material.dispose();
+        list.splice(i, 1);
+      }
+    }
+  }
+
+  /* ====================================================================== *
+   *  5f. MILESTONE 2 — RESOURCES (health / stamina / magicka)               *
+   *      All spends route through these mutators so a future server          *
+   *      authority can validate them in one place.                          *
+   * ====================================================================== */
+  function spendStamina(n) { const P = GameState.player; P.stamina = Math.max(0, P.stamina - n); P.staminaIdle = 0; }
+  function spendMagicka(n) { const P = GameState.player; P.magicka = Math.max(0, P.magicka - n); P.magickaIdle = 0; }
+
+  /**
+   * Applies incoming damage to the player, honouring the guard if the hit is
+   * blockable and the player is blocking with stamina to spare.
+   */
+  function damagePlayer(amount, opts = {}) {
+    const P = GameState.player, C = CONFIG.combat;
+    if (!P.alive || amount <= 0) return;
+
+    if (opts.blockable && P.blocking && P.stamina > 0) {
+      const blocked = amount * C.blockMitigation;
+      const staminaCost = blocked * C.blockStaminaPerDmg;
+      if (P.stamina >= staminaCost) {
+        spendStamina(staminaCost);
+        amount -= blocked;                 // guard holds
+      } else {
+        // guard broken: partial mitigation, stamina emptied
+        amount -= blocked * (P.stamina / staminaCost);
+        spendStamina(P.stamina);
+      }
+    }
+
+    amount = Math.round(amount);
+    if (amount <= 0) return;
+    P.health = Math.max(0, P.health - amount);
+    P.healthIdle = 0;
+    flashHurt();
+    spawnDamageNumber(null, amount, false, true); // player damage → centre screen
+
+    if (P.health <= 0) killPlayer();
+  }
+
+  function killPlayer() {
+    const P = GameState.player;
+    P.alive = false;
+    // Simple respawn: restore vitals and return to the spawn plain after a beat.
+    setTimeout(() => {
+      P.health = CONFIG.stats.maxHealth;
+      P.stamina = CONFIG.stats.maxStamina;
+      P.magicka = CONFIG.stats.maxMagicka;
+      P.position.set(CONFIG.player.startXZ[0], 0, CONFIG.player.startXZ[1]);
+      P.position.y = heightAt(P.position.x, P.position.z) + CONFIG.player.eyeHeight;
+      P.velocity.set(0, 0, 0);
+      controls.getObject().position.copy(P.position);
+      P.alive = true;
+    }, 900);
+  }
+
+  /** Regenerates pools once the player stops spending, after a per-pool delay. */
+  function updateStats(dt) {
+    const P = GameState.player, S = CONFIG.stats;
+    P.healthIdle += dt; P.staminaIdle += dt; P.magickaIdle += dt;
+
+    // sprint continuously drains stamina (and is gated on it in updatePlayer).
+    // Once empty, stop resetting the idle timer so the pool can begin to regen
+    // even while Shift is still held.
+    const moving = input.forward || input.back || input.left || input.right;
+    if (input.sprint && moving && P.onGround && !P.blocking && P.stamina > 0) {
+      P.stamina = Math.max(0, P.stamina - S.sprintDrain * dt);
+      P.staminaIdle = 0;
+    }
+
+    if (P.healthIdle > S.healthRegenDelay)  P.health  = Math.min(S.maxHealth,  P.health  + S.healthRegen  * dt);
+    if (P.staminaIdle > S.staminaRegenDelay)P.stamina = Math.min(S.maxStamina, P.stamina + S.staminaRegen * dt);
+    if (P.magickaIdle > S.magickaRegenDelay)P.magicka = Math.min(S.maxMagicka, P.magicka + S.magickaRegen * dt);
+
+    if (P.castCd > 0) P.castCd = Math.max(0, P.castCd - dt);
+  }
+
+  /* ====================================================================== *
+   *  5g. MILESTONE 2 — DAMAGE NUMBERS (world-projected DOM overlay)         *
+   * ====================================================================== */
+  const damageLayer = document.getElementById("damage-layer");
+  const _proj = new THREE.Vector3();
+
+  /**
+   * Spawns a floating damage number. If worldPos is null the number appears
+   * near screen-centre (used for damage TO the player).
+   */
+  function spawnDamageNumber(worldPos, value, crit, isPlayer) {
+    const el = document.createElement("div");
+    el.className = "dmg" + (crit ? " crit" : "") + (isPlayer ? " player" : "");
+    el.textContent = (isPlayer ? "-" : "") + value;
+
+    let sx = window.innerWidth / 2, sy = window.innerHeight / 2 - 40;
+    if (worldPos) {
+      _proj.copy(worldPos).project(camera);
+      if (_proj.z > 1) { return; } // behind the camera — skip
+      sx = (_proj.x * 0.5 + 0.5) * window.innerWidth;
+      sy = (-_proj.y * 0.5 + 0.5) * window.innerHeight;
+    }
+    el.style.left = sx + "px";
+    el.style.top = sy + "px";
+    damageLayer.appendChild(el);
+
+    // rise + fade via WAAPI (cheap, GPU-composited)
+    const drift = (Math.random() - 0.5) * 30;
+    el.animate(
+      [ { transform: "translate(-50%,-50%)", opacity: 1 },
+        { transform: `translate(calc(-50% + ${drift}px), -140%)`, opacity: 0 } ],
+      { duration: 850, easing: "ease-out" }
+    ).onfinish = () => el.remove();
+  }
+
+  const hurtEl = document.getElementById("hurt");
+  function flashHurt() {
+    hurtEl.classList.add("flash");
+    // force reflow so removing the class animates the fade back out
+    void hurtEl.offsetWidth;
+    hurtEl.classList.remove("flash");
   }
 
   /* ====================================================================== *
@@ -818,6 +1479,35 @@
     compass.textContent = DIRS[Math.round(deg / 45) % 8];
   }
 
+  /* --- Milestone 2: vitals bars + charge meter + block vignette (per frame) --- */
+  const fillHealth = document.querySelector("#bar-health .fill");
+  const fillStamina = document.querySelector("#bar-stamina .fill");
+  const fillMagicka = document.querySelector("#bar-magicka .fill");
+  const barStamina = document.getElementById("bar-stamina");
+  const chargeEl = document.getElementById("charge");
+  const chargeFill = chargeEl.querySelector(".c-fill");
+  const vignetteEl = document.getElementById("vignette");
+
+  function updateVitalsHUD() {
+    const P = GameState.player, S = CONFIG.stats;
+    fillHealth.style.transform = `scaleX(${P.health / S.maxHealth})`;
+    fillStamina.style.transform = `scaleX(${P.stamina / S.maxStamina})`;
+    fillMagicka.style.transform = `scaleX(${P.magicka / S.maxMagicka})`;
+    barStamina.classList.toggle("exhausted", P.stamina < 1);
+
+    // heavy-attack charge meter
+    if (P.charging) {
+      const c = Math.min(1, P.chargeT / CONFIG.combat.heavyChargeTime);
+      chargeEl.classList.add("show");
+      chargeEl.classList.toggle("ready", c >= 1);
+      chargeFill.style.width = (c * 100) + "%";
+    } else {
+      chargeEl.classList.remove("show", "ready");
+    }
+
+    vignetteEl.classList.toggle("blocking", P.blocking);
+  }
+
   /* ====================================================================== *
    *  9. RESIZE                                                              *
    * ====================================================================== */
@@ -840,8 +1530,15 @@
 
     if (!GameState.ui.inventoryOpen && controls.isLocked) {
       updatePlayer(dt);
+      updateStats(dt);      // regen + sprint drain (Milestone 2)
+      updateCombat(dt);     // swing timing + hit detection
+      updateDummies(dt);    // hit-flash, respawn, sparring metronome
+      updateProjectiles(dt);// fireballs in flight
+      updateEffects(dt);    // explosion VFX
+      updateViewmodel(dt);  // sword/hand animation
     }
     updateHUD(dt);
+    updateVitalsHUD();
     renderer.render(scene, camera);
   }
 
@@ -866,7 +1563,24 @@
       playPrompt.classList.remove("hidden");
 
       loop();
-      console.info("[Dragonreach] Milestone 1 ready. Click to play.");
+      console.info("[Dragonreach] Milestone 2 ready. Click to play.");
+
+      // Optional debug handle (opt-in via ?debug=1) — lets automated tests and
+      // tinkerers drive systems deterministically without pointer lock.
+      if (new URLSearchParams(location.search).has("debug")) {
+        window.DR = {
+          GameState, CONFIG,
+          startAttack, castFireball, damagePlayer,
+          /** Current camera (eye) world position — the origin for hit tests. */
+          camPos() { const v = new THREE.Vector3(); controls.getObject().getWorldPosition(v); return { x: v.x, y: v.y, z: v.z }; },
+          /** Advance the Milestone 2 simulation by dt seconds (no input/render). */
+          sim(dt) {
+            updateStats(dt); updateCombat(dt); updateDummies(dt);
+            updateProjectiles(dt); updateEffects(dt); updateViewmodel(dt);
+          },
+        };
+        console.info("[Dragonreach] debug handle exposed as window.DR");
+      }
     } catch (err) {
       fatal("The forge failed", err.message || String(err));
       throw err;

@@ -19,11 +19,26 @@ Lives under `/game/` so it is fully isolated from the rest of the site.
 - Procedural **training dummies** (destructible, auto-respawn); one **spars back** on a
   fixed cadence so blocking and health are testable before enemy AI (Milestone 3)
 
+## Milestone 3 — World, NPCs & Quests ✅
+- Interactive quest-giver NPC (**Sigrid**) with a dialogue overlay (accept / track / turn-in);
+  walk up and press `E`
+- **Radiant** "Kill the Bandit" bounty — randomized target name, world location, and reward
+  each time; repeatable after turn-in
+- **Quest journal** (`J`): active + completed quests, live objective counters, rewards, and a
+  per-quest *Track* toggle; plus an always-on HUD **quest tracker** with distance and a
+  floating in-world beacon over the target
+- **Bandit enemy AI**: `patrol` (wander waypoints) → `chase` (aggro on sight or when struck) →
+  `attack` (telegraphed, blockable strikes), with a billboarded health bar and death/topple
+- Bandits share the Milestone 2 damage pipeline (sword + fireball kill them); a kill advances
+  the objective, and turning in pays **gold + item straight into the Milestone 1 inventory**
+- Toast notifications for quest events
+
 Vendored Three.js locally under `vendor/` so the game has **no runtime CDN dependency**.
 
 ### Debug handle
 Append `?debug=1` to the URL to expose `window.DR` (`GameState`, `CONFIG`, `startAttack`,
-`castFireball`, `damagePlayer`, `camPos()`, and a `sim(dt)` step) for tinkering/automated tests.
+`castFireball`, `damagePlayer`, `generateBanditQuest`, `acceptQuest`, `turnInQuest`,
+`damageBandit`, `camPos()`, and a `sim(dt)` step) for tinkering/automated tests.
 
 ### Run it
 Everything is one self-contained file — no build step.
@@ -48,6 +63,8 @@ Everything is one self-contained file — no build step.
 | `LMB` (hold + release) | Heavy attack |
 | `RMB` (hold) | Block |
 | `F` | Cast fireball |
+| `E` | Talk to nearby NPC |
+| `J` | Toggle quest journal |
 | `I` | Toggle inventory |
 | `Esc` | Release cursor |
 

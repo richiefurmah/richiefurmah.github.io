@@ -217,6 +217,110 @@
   .dmg.player { color: #ff5b5b; }
 
   /* ------------------------------------------------------------------ *
+   *  Milestone 3: interact prompt, quest tracker, toasts               *
+   * ------------------------------------------------------------------ */
+  #interact {
+    position: absolute; left: 50%; top: 58%; transform: translateX(-50%);
+    font-size: 0.95rem; text-shadow: var(--hud-shadow); opacity: 0;
+    transition: opacity 0.12s; text-align: center;
+  }
+  #interact.show { opacity: 0.95; }
+  #interact kbd {
+    display: inline-block; padding: 1px 7px; background: #2a2318;
+    border: 1px solid var(--accent); border-radius: 4px; color: #f4eccf;
+  }
+
+  #tracker {
+    position: absolute; top: 64px; right: 16px; max-width: 260px;
+    text-align: right; text-shadow: var(--hud-shadow); display: none;
+  }
+  #tracker.show { display: block; }
+  #tracker .q-title {
+    color: var(--accent); font-size: 0.82rem; letter-spacing: 0.12rem;
+    text-transform: uppercase; margin-bottom: 3px;
+  }
+  #tracker .q-obj { font-size: 0.9rem; }
+  #tracker .q-obj.done { color: #7bc148; }
+  #tracker .q-dist { font-size: 0.74rem; opacity: 0.7; margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+  #toasts {
+    position: absolute; top: 20%; left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; gap: 8px; align-items: center;
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--panel-bg); border: 1px solid var(--panel-border);
+    border-left: 3px solid var(--accent);
+    padding: 8px 18px; border-radius: 6px; font-size: 0.9rem;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5); text-align: center;
+    animation: toastIn 0.25s ease;
+  }
+  .toast .t-head { color: var(--accent); font-size: 0.72rem; letter-spacing: 0.16rem; text-transform: uppercase; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+
+  /* ------------------------------------------------------------------ *
+   *  Milestone 3: dialogue + journal overlays (share the menu look)    *
+   * ------------------------------------------------------------------ */
+  #dialogue, #journal {
+    position: fixed; inset: 0; z-index: 30;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(5, 6, 10, 0.6); backdrop-filter: blur(3px);
+  }
+  #dialogue.open, #journal.open { display: flex; }
+
+  #dialogue .frame {
+    width: min(620px, 92vw);
+    background: var(--panel-bg); border: 1px solid var(--panel-border);
+    border-radius: 10px; box-shadow: 0 20px 60px rgba(0,0,0,0.7); overflow: hidden;
+  }
+  #dialogue .d-head { padding: 1rem 1.4rem; border-bottom: 1px solid var(--panel-border); }
+  #dialogue .d-name { color: var(--accent); letter-spacing: 0.18rem; text-transform: uppercase; font-size: 1.1rem; }
+  #dialogue .d-role { font-size: 0.72rem; opacity: 0.6; }
+  #dialogue .d-body { padding: 1.3rem 1.4rem; font-size: 0.98rem; line-height: 1.65; }
+  #dialogue .d-reward { margin-top: 0.9rem; font-size: 0.85rem; opacity: 0.85; }
+  #dialogue .d-reward b { color: var(--accent); }
+  #dialogue .d-choices { display: flex; gap: 10px; padding: 0 1.4rem 1.3rem; flex-wrap: wrap; }
+  .choice {
+    flex: 1; min-width: 140px; padding: 0.7rem 1rem; cursor: pointer;
+    background: rgba(60,48,24,0.4); border: 1px solid #6b5a36; border-radius: 6px;
+    color: var(--hud-fg); font-family: inherit; font-size: 0.9rem; text-align: center;
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .choice:hover { background: rgba(90,72,36,0.6); border-color: var(--accent); }
+  .choice.primary { border-color: var(--accent); color: #f4eccf; }
+
+  #journal .frame {
+    width: min(820px, 92vw); height: min(560px, 88vh);
+    display: flex; flex-direction: column;
+    background: var(--panel-bg); border: 1px solid var(--panel-border);
+    border-radius: 10px; box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+  }
+  #journal header { display:flex; justify-content: space-between; align-items: baseline;
+    padding: 1rem 1.4rem; border-bottom: 1px solid var(--panel-border); }
+  #journal header h2 { color: var(--accent); letter-spacing: 0.2rem; text-transform: uppercase; font-size: 1.2rem; }
+  #journal .j-body { flex: 1; overflow-y: auto; padding: 1rem 1.4rem; }
+  #journal .j-empty { opacity: 0.45; font-style: italic; margin-top: 2rem; text-align: center; }
+  .quest-card {
+    border: 1px solid #4c4026; border-radius: 8px; padding: 0.9rem 1.1rem;
+    margin-bottom: 0.9rem; background: rgba(0,0,0,0.25);
+  }
+  .quest-card.tracked { border-color: var(--accent); }
+  .quest-card.done { opacity: 0.7; }
+  .quest-card h3 { color: var(--accent); font-size: 1rem; margin-bottom: 0.3rem; }
+  .quest-card .q-status { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12rem; opacity: 0.7; }
+  .quest-card .q-desc { font-size: 0.88rem; line-height: 1.5; margin: 0.5rem 0; opacity: 0.9; }
+  .quest-card .q-obj-row { font-size: 0.88rem; }
+  .quest-card .q-obj-row.done { color: #7bc148; }
+  .quest-card .q-reward { font-size: 0.8rem; opacity: 0.8; margin-top: 0.4rem; }
+  .quest-card .q-reward b { color: var(--accent); }
+  .quest-card .q-track-btn {
+    margin-top: 0.6rem; font-size: 0.75rem; padding: 3px 10px; cursor: pointer;
+    background: transparent; border: 1px solid #6b5a36; border-radius: 4px; color: var(--hud-fg);
+  }
+  .quest-card .q-track-btn:hover { border-color: var(--accent); }
+  #journal footer { padding: 0.7rem 1.4rem; border-top: 1px solid var(--panel-border); font-size: 0.75rem; opacity: 0.6; text-align: center; }
+
+  /* ------------------------------------------------------------------ *
    *  Inventory screen (placeholder UI)                                  *
    * ------------------------------------------------------------------ */
   #inventory {
@@ -303,7 +407,8 @@
         <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move &nbsp;·&nbsp; <kbd>Mouse</kbd> Look<br />
         <kbd>Shift</kbd> Sprint &nbsp;·&nbsp; <kbd>Space</kbd> Jump<br />
         <kbd>LMB</kbd> Light Attack &nbsp;·&nbsp; <kbd>Hold&nbsp;LMB</kbd> Heavy &nbsp;·&nbsp; <kbd>RMB</kbd> Block<br />
-        <kbd>F</kbd> Cast Fireball &nbsp;·&nbsp; <kbd>I</kbd> Inventory &nbsp;·&nbsp; <kbd>Esc</kbd> Release cursor
+        <kbd>F</kbd> Cast Fireball &nbsp;·&nbsp; <kbd>E</kbd> Talk &nbsp;·&nbsp; <kbd>J</kbd> Journal &nbsp;·&nbsp; <kbd>I</kbd> Inventory<br />
+        <kbd>Esc</kbd> Release cursor
       </div>
     </div>
   </div>
@@ -326,9 +431,43 @@
       <div class="bar" id="bar-stamina"><div class="fill"></div><div class="label">Stamina</div></div>
       <div class="bar" id="bar-magicka"><div class="fill"></div><div class="label">Magicka</div></div>
     </div>
+    <div id="interact"></div>
+    <div id="tracker">
+      <div class="q-title" id="tk-title"></div>
+      <div class="q-obj" id="tk-obj"></div>
+      <div class="q-dist" id="tk-dist"></div>
+    </div>
+    <div id="toasts"></div>
     <div id="hint">
       <kbd>LMB</kbd> Light &nbsp; <kbd>Hold LMB</kbd> Heavy &nbsp; <kbd>RMB</kbd> Block<br />
-      <kbd>F</kbd> Fireball &nbsp; <kbd>Shift</kbd> Sprint &nbsp; <kbd>I</kbd> Inventory
+      <kbd>F</kbd> Fireball &nbsp; <kbd>E</kbd> Talk &nbsp; <kbd>J</kbd> Journal &nbsp; <kbd>I</kbd> Inventory
+    </div>
+  </div>
+
+  <!-- Milestone 3: NPC dialogue -->
+  <div id="dialogue">
+    <div class="frame">
+      <div class="d-head">
+        <div class="d-name" id="d-name">Sigrid</div>
+        <div class="d-role" id="d-role">Huntress of Dragonreach</div>
+      </div>
+      <div class="d-body">
+        <div id="d-text"></div>
+        <div class="d-reward" id="d-reward"></div>
+      </div>
+      <div class="d-choices" id="d-choices"></div>
+    </div>
+  </div>
+
+  <!-- Milestone 3: quest journal -->
+  <div id="journal">
+    <div class="frame">
+      <header>
+        <h2>Quest Journal</h2>
+        <span style="font-size:0.8rem;opacity:0.7">Active &amp; completed</span>
+      </header>
+      <div class="j-body" id="j-body"></div>
+      <footer>Press <kbd>J</kbd> or <kbd>Esc</kbd> to close · Track a quest to show its marker in the world</footer>
     </div>
   </div>
 
@@ -452,6 +591,26 @@
       fireballLife: 2.4, fireballRadius: 4.5, // AoE explosion radius (m)
       castCooldown: 0.45,
     },
+
+    // --- Milestone 3: NPC + quest tuning ---
+    npc: {
+      interactRange: 4.0,     // metres to enable the "[E] Talk" prompt
+      position: [4, 0, 6],    // near spawn, easy to find
+    },
+    quest: {
+      rewardGoldMin: 60, rewardGoldMax: 160,
+      banditSpawnMin: 55, banditSpawnMax: 95, // radial distance of the target
+    },
+
+    // --- Milestone 3: bandit enemy AI tuning ---
+    enemy: {
+      maxHealth: 70,
+      patrolSpeed: 2.2, chaseSpeed: 5.2,
+      detectRange: 22, leashRange: 40,   // aggro on / give up distances
+      attackRange: 2.6, attackWindup: 0.55, attackCooldown: 1.6,
+      attackDamage: 14,
+      patrolRadius: 10,                  // wander radius around spawn
+    },
   });
 
   /* ====================================================================== *
@@ -482,10 +641,16 @@
     },
 
     // --- Milestone 2: dynamic entities (dummies, projectiles, VFX) ---
-    entities: { dummies: [], projectiles: [], effects: [] },
+    // --- Milestone 3 adds enemies (bandits) + the quest-giver NPC ---
+    entities: { dummies: [], projectiles: [], effects: [], enemies: [], npc: null },
+
+    // --- Milestone 3: quest log (authoritative) ---
+    quests: [],          // array of quest objects
+    trackedQuestId: null,// which quest drives the HUD tracker + world marker
+    questSeq: 0,         // monotonic id source for radiant quests
 
     // --- UI flags ---
-    ui: { inventoryOpen: false, pointerLocked: false },
+    ui: { inventoryOpen: false, journalOpen: false, dialogueOpen: false, pointerLocked: false },
 
     // --- inventory: authoritative item list + capacity ---
     inventory: {
@@ -648,6 +813,9 @@
 
     // --- Milestone 2: procedural training dummies to fight & burn ---
     spawnDummies();
+
+    // --- Milestone 3: the quest-giver NPC ---
+    spawnNPC();
   }
 
   /**
@@ -763,9 +931,14 @@
     };
 
     document.addEventListener("keydown", (e) => {
-      // Inventory toggle (works whether or not the pointer is locked).
-      if (e.code === "KeyI") { e.preventDefault(); toggleInventory(); return; }
-      if (GameState.ui.inventoryOpen) return; // swallow movement while in menus
+      // Dialogue is fully modal — its own buttons drive it.
+      if (GameState.ui.dialogueOpen) return;
+      // Menu toggles (guarded so overlays can't stack).
+      if (e.code === "KeyI" && !GameState.ui.journalOpen) { e.preventDefault(); toggleInventory(); return; }
+      if (e.code === "KeyJ" && !GameState.ui.inventoryOpen) { e.preventDefault(); toggleJournal(); return; }
+      if (GameState.ui.inventoryOpen || GameState.ui.journalOpen) return; // swallow movement while in menus
+      // Talk to a nearby NPC (Milestone 3).
+      if (e.code === "KeyE" && controls.isLocked && GameState.ui.interactTarget === "npc") { openDialogue(); return; }
       // Cast fireball (Milestone 2) — only when playing.
       if (e.code === "KeyF" && controls.isLocked) { castFireball(); return; }
       set(e.code, true);
@@ -794,7 +967,7 @@
     document.addEventListener("contextmenu", (e) => e.preventDefault());
 
     document.addEventListener("mousedown", (e) => {
-      if (!controls.isLocked || GameState.ui.inventoryOpen) return;
+      if (!controls.isLocked || menusOpen()) return;
       const P = GameState.player;
       if (e.button === 0) {            // LMB → begin a swing charge
         if (!P.blocking) { P.charging = true; P.chargeT = 0; }
@@ -1137,16 +1310,19 @@
       controls.getObject().getWorldPosition(_camPos);
       controls.getDirection(_fwd); _fwd.y = 0; _fwd.normalize();
 
-      for (const d of GameState.entities.dummies) {
-        if (d.dead) continue;
-        _d.copy(d.pos).sub(_camPos); _d.y = 0;
+      const crit = A.type === "heavy";
+      // hit-cone test shared by training dummies and live bandits
+      const tryHit = (target, apply) => {
+        if (target.dead) return;
+        _d.copy(target.pos).sub(_camPos); _d.y = 0;
         const dist = _d.length();
-        if (dist > A.reach) continue;
+        if (dist > A.reach) return;
         _d.normalize();
-        if (_fwd.dot(_d) < CONFIG.combat.swingArcCos) continue; // outside the cone
-        const crit = A.type === "heavy";
-        damageDummy(d, A.dmg, crit);
-      }
+        if (_fwd.dot(_d) < CONFIG.combat.swingArcCos) return; // outside the cone
+        apply();
+      };
+      for (const d of GameState.entities.dummies) tryHit(d, () => damageDummy(d, A.dmg, crit));
+      for (const e of GameState.entities.enemies) tryHit(e, () => damageBandit(e, A.dmg, crit));
     }
 
     if (A.t >= A.dur) A.active = false;    // swing complete
@@ -1199,11 +1375,17 @@
       const groundH = heightAt(pos.x, pos.z);
       let detonate = p.life <= 0 || pos.y <= groundH;
 
-      // proximity fuse against dummies
+      // proximity fuse against dummies + bandits
       if (!detonate) {
         for (const d of GameState.entities.dummies) {
           if (d.dead) continue;
           if (_pd.copy(d.pos).sub(pos).lengthSq() < 1.4 * 1.4) { detonate = true; break; }
+        }
+      }
+      if (!detonate) {
+        for (const e of GameState.entities.enemies) {
+          if (e.dead) continue;
+          if (_pd.copy(e.pos).sub(pos).lengthSq() < 1.4 * 1.4) { detonate = true; break; }
         }
       }
 
@@ -1219,13 +1401,21 @@
   /** AoE fire burst: damages dummies (and the caster if too close) + spawns VFX. */
   function explode(pos) {
     const M = CONFIG.magic;
-    // damage dummies with linear falloff
+    // damage dummies + bandits with linear falloff
     for (const d of GameState.entities.dummies) {
       if (d.dead) continue;
       const dist = _pd.copy(d.pos).sub(pos).length();
       if (dist <= M.fireballRadius) {
         const dmg = M.fireballDamage * (1 - dist / M.fireballRadius);
         if (dmg > 1) damageDummy(d, dmg, true);
+      }
+    }
+    for (const e of GameState.entities.enemies) {
+      if (e.dead) continue;
+      const dist = _pd.copy(e.pos).sub(pos).length();
+      if (dist <= M.fireballRadius) {
+        const dmg = M.fireballDamage * (1 - dist / M.fireballRadius);
+        if (dmg > 1) damageBandit(e, dmg, true);
       }
     }
     // self-damage if you fireball your own feet (demonstrates Health intake)
@@ -1383,6 +1573,490 @@
   }
 
   /* ====================================================================== *
+   *  5h. MILESTONE 3 — HUMANOIDS (shared low-poly mesh for NPC & bandits)   *
+   * ====================================================================== */
+  /**
+   * Builds a simple box-figure humanoid from a palette. Returns the group plus
+   * arm references so callers can animate an idle sway / attack swing.
+   */
+  function makeHumanoid(palette) {
+    const g = new THREE.Group();
+    const skinM = new THREE.MeshStandardMaterial({ color: palette.skin, roughness: 0.9 });
+    const bodyM = new THREE.MeshStandardMaterial({ color: palette.body, roughness: 0.85 });
+    const legM  = new THREE.MeshStandardMaterial({ color: palette.legs, roughness: 0.9 });
+
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.28), bodyM); torso.position.y = 1.15;
+    const head  = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.3, 0.28), skinM); head.position.y = 1.68;
+
+    // Arms share one geometry translated so its pivot sits at the shoulder,
+    // letting rotation.x swing the whole arm about the top.
+    const armGeo = new THREE.BoxGeometry(0.14, 0.62, 0.16); armGeo.translate(0, -0.31, 0);
+    const armL = new THREE.Mesh(armGeo, bodyM); const armR = new THREE.Mesh(armGeo, bodyM);
+    armL.position.set(-0.34, 1.45, 0); armR.position.set(0.34, 1.45, 0);
+
+    const legGeo = new THREE.BoxGeometry(0.18, 0.75, 0.2);
+    const legL = new THREE.Mesh(legGeo, legM); const legR = new THREE.Mesh(legGeo, legM);
+    legL.position.set(-0.13, 0.4, 0); legR.position.set(0.13, 0.4, 0);
+    g.add(torso, head, armL, armR, legL, legR); // children order: [0..5] used by walk anim
+
+    if (palette.weapon) { // bandits carry a crude blade in the right hand
+      const w = new THREE.Mesh(
+        new THREE.BoxGeometry(0.06, 0.7, 0.02),
+        new THREE.MeshStandardMaterial({ color: 0xb9bcc2, metalness: 0.6, roughness: 0.4 }));
+      w.position.set(0, -0.55, 0); armR.add(w);
+    }
+    g.traverse((o) => { if (o.isMesh) { o.castShadow = true; } });
+    return { group: g, armL, armR };
+  }
+
+  /* ====================================================================== *
+   *  5i. MILESTONE 3 — QUEST-GIVER NPC + interaction                        *
+   * ====================================================================== */
+  function spawnNPC() {
+    const [x, , z] = CONFIG.npc.position;
+    const y = heightAt(x, z);
+    const h = makeHumanoid({ skin: 0xd8b48a, body: 0x33562f, legs: 0x2a2118 });
+    h.group.position.set(x, y, z);
+    scene.add(h.group);
+    GameState.entities.npc = {
+      name: "Sigrid", role: "Huntress of Dragonreach",
+      mesh: h.group, arms: h, pos: new THREE.Vector3(x, y + 1.4, z),
+      idle: 0,
+    };
+  }
+
+  const _npcToPlayer = new THREE.Vector3();
+  const interactEl = document.getElementById("interact");
+
+  function updateNPCInteraction(dt) {
+    const npc = GameState.entities.npc;
+    if (!npc) return;
+
+    // gentle idle sway + always face the player
+    npc.idle += dt;
+    npc.arms.armL.rotation.x = Math.sin(npc.idle * 1.5) * 0.08;
+    npc.arms.armR.rotation.x = -Math.sin(npc.idle * 1.5) * 0.08;
+    controls.getObject().getWorldPosition(_camPos);
+    npc.mesh.lookAt(_camPos.x, npc.mesh.position.y, _camPos.z);
+
+    const dist = _npcToPlayer.copy(npc.pos).sub(_camPos).setY(0).length();
+    const near = dist <= CONFIG.npc.interactRange && !menusOpen();
+    GameState.ui.interactTarget = near ? "npc" : null;
+    if (near) {
+      interactEl.innerHTML = `<kbd>E</kbd> Talk to ${npc.name}`;
+      interactEl.classList.add("show");
+    } else {
+      interactEl.classList.remove("show");
+    }
+  }
+
+  /* ====================================================================== *
+   *  5j. MILESTONE 3 — RADIANT "KILL THE BANDIT" QUEST GENERATION           *
+   * ====================================================================== */
+  const BANDIT_NAMES = ["Grishnak the Cruel", "Redwald One-Eye", "Hakon Blackthorn",
+    "Ulfric the Cutthroat", "Mira Ashfang", "Torvald the Wretched", "Selene Nightreave"];
+  const REWARD_ITEMS = [
+    { id: "amulet_warm", name: "Warmth Amulet", glyph: "📿", type: "Apparel", weight: 1, desc: "Wards off the mountain chill." },
+    { id: "ring_vigor",  name: "Ring of Vigor", glyph: "💍", type: "Apparel", weight: 0, desc: "The wearer tires less easily." },
+    { id: "gem_soul",    name: "Filled Soul Gem", glyph: "💎", type: "Reagent", weight: 1, desc: "Hums with captured energy." },
+    { id: "scroll_fire", name: "Fire Scroll", glyph: "📜", type: "Scroll", weight: 0, desc: "A single, potent flame spell." },
+  ];
+  const COMPASS8 = ["north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west"];
+
+  let _seed = 20260702; // deterministic-ish sequence so runs are reproducible-in-order
+  function qrand() { _seed = (_seed * 1103515245 + 12345) & 0x7fffffff; return _seed / 0x7fffffff; }
+
+  /** Produces a fresh radiant bounty: random target, location, and reward. */
+  function generateBanditQuest() {
+    const name = BANDIT_NAMES[Math.floor(qrand() * BANDIT_NAMES.length)];
+    const gold = Math.round(CONFIG.quest.rewardGoldMin +
+      qrand() * (CONFIG.quest.rewardGoldMax - CONFIG.quest.rewardGoldMin));
+    const item = REWARD_ITEMS[Math.floor(qrand() * REWARD_ITEMS.length)];
+
+    // pick a spot on the plain at a radial distance from the world centre
+    const ang = qrand() * Math.PI * 2;
+    const rad = CONFIG.quest.banditSpawnMin + qrand() * (CONFIG.quest.banditSpawnMax - CONFIG.quest.banditSpawnMin);
+    const lx = Math.sin(ang) * rad, lz = Math.cos(ang) * rad;
+    const dir = COMPASS8[Math.round((((Math.atan2(lx, lz) * 180 / Math.PI) + 360) % 360) / 45) % 8];
+
+    return {
+      id: ++GameState.questSeq,
+      title: `Bounty: ${name}`,
+      giver: "Sigrid",
+      type: "kill",
+      targetName: name,
+      required: 1, progress: 0,
+      rewardGold: gold, rewardItem: item,
+      state: "active",
+      dir,
+      location: new THREE.Vector3(lx, heightAt(lx, lz), lz),
+    };
+  }
+
+  /** Accepts a quest: pushes it to the log, tracks it, spawns the target. */
+  function acceptQuest(q) {
+    GameState.quests.push(q);
+    GameState.trackedQuestId = q.id;
+    spawnBanditForQuest(q);
+    toast("Quest Added", q.title);
+  }
+
+  /** Grants gold + item into the Milestone 1 inventory and closes the bounty. */
+  function turnInQuest(q) {
+    q.state = "turnedin";
+    if (GameState.trackedQuestId === q.id) GameState.trackedQuestId = null;
+
+    const inv = GameState.inventory.items;
+    const gold = inv.find((i) => i.id === "gold");
+    if (gold) gold.qty += q.rewardGold; else inv.push({ id: "gold", name: "Gold Septims", glyph: "🪙", type: "Currency", qty: q.rewardGold, weight: 0, desc: "The coin of the realm." });
+    const existing = inv.find((i) => i.id === q.rewardItem.id);
+    if (existing) existing.qty += 1; else inv.push({ ...q.rewardItem, qty: 1 });
+
+    toast("Reward Received", `${q.rewardGold} gold + ${q.rewardItem.name}`);
+    if (GameState.ui.inventoryOpen) renderInventory();
+  }
+
+  /** The active/complete Sigrid bounty, if any (radiant → one at a time). */
+  function activeBounty() {
+    return GameState.quests.find((q) => q.state === "active" || q.state === "complete");
+  }
+
+  /* ====================================================================== *
+   *  5k. MILESTONE 3 — BANDIT ENEMIES (patrol / chase / attack AI)          *
+   * ====================================================================== */
+  function spawnBanditForQuest(q) {
+    const h = makeHumanoid({ skin: 0xc79a6d, body: 0x4a2f2a, legs: 0x241a12, weapon: true });
+    const p = q.location;
+    h.group.position.copy(p);
+    scene.add(h.group);
+
+    // floating health bar (billboarded, added to scene so it faces the camera)
+    const barBg = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.14),
+      new THREE.MeshBasicMaterial({ color: 0x220000, depthTest: false, transparent: true }));
+    const barFill = new THREE.Mesh(new THREE.PlaneGeometry(1.06, 0.1),
+      new THREE.MeshBasicMaterial({ color: 0xd1453b, depthTest: false, transparent: true }));
+    barFill.position.z = 0.001;
+    const barGroup = new THREE.Group(); barGroup.add(barBg, barFill);
+    barGroup.renderOrder = 999; barBg.renderOrder = 999; barFill.renderOrder = 1000;
+    scene.add(barGroup);
+
+    // quest marker beacon (only shown while this quest is tracked)
+    const marker = new THREE.Mesh(new THREE.OctahedronGeometry(0.4, 0),
+      new THREE.MeshBasicMaterial({ color: 0xffcc55, depthTest: false }));
+    const markerLight = new THREE.PointLight(0xffcc55, 2, 10);
+    marker.add(markerLight); marker.renderOrder = 1001;
+    scene.add(marker);
+
+    GameState.entities.enemies.push({
+      mesh: h.group, arms: h,
+      healthBar: { group: barGroup, fill: barFill },
+      marker,
+      pos: new THREE.Vector3(p.x, p.y + 1.2, p.z),
+      spawn: p.clone(),
+      hp: CONFIG.enemy.maxHealth, maxHp: CONFIG.enemy.maxHealth,
+      state: "patrol", wp: null,
+      attackCd: 0, telegraph: 0, hitFlash: 0, anim: 0,
+      dead: false, corpseT: 0,
+      questId: q.id,
+    });
+  }
+
+  const _eToPlayer = new THREE.Vector3();
+  const _eToWp = new THREE.Vector3();
+
+  function pickWaypoint(e) {
+    const a = qrand() * Math.PI * 2, r = qrand() * CONFIG.enemy.patrolRadius;
+    const x = e.spawn.x + Math.sin(a) * r, z = e.spawn.z + Math.cos(a) * r;
+    e.wp = new THREE.Vector3(x, heightAt(x, z), z);
+  }
+
+  function updateEnemies(dt) {
+    const E = CONFIG.enemy;
+    controls.getObject().getWorldPosition(_camPos);
+
+    for (const e of GameState.entities.enemies) {
+      // --- keep torso-centre + health bar + marker positioned every frame ---
+      e.pos.set(e.mesh.position.x, e.mesh.position.y + 1.2, e.mesh.position.z);
+
+      if (e.dead) {
+        // topple, then fade the corpse out and retire the bar/marker
+        e.corpseT += dt;
+        e.mesh.rotation.z = Math.min(Math.PI / 2, e.mesh.rotation.z + dt * 2.5);
+        e.healthBar.group.visible = false;
+        e.marker.visible = false;
+        continue;
+      }
+
+      // hit-flash decay
+      if (e.hitFlash > 0) {
+        e.hitFlash = Math.max(0, e.hitFlash - dt);
+        const f = e.hitFlash / 0.15;
+        e.mesh.children.forEach((c) => c.material && c.material.emissive && c.material.emissive.setRGB(f, 0, 0));
+      }
+
+      const distToPlayer = _eToPlayer.copy(_camPos).sub(e.pos).setY(0).length();
+
+      // --- state machine ---
+      if (e.state === "patrol") {
+        if (!e.wp || _eToWp.copy(e.wp).sub(e.mesh.position).setY(0).length() < 1.0) pickWaypoint(e);
+        moveToward(e, e.wp, E.patrolSpeed, dt);
+        if (distToPlayer < E.detectRange) { e.state = "chase"; toast("Bandit", `${nameOf(e)} spotted you!`); }
+      } else if (e.state === "chase") {
+        moveToward(e, _camPos, E.chaseSpeed, dt);
+        faceTo(e, _camPos);
+        if (distToPlayer > E.leashRange) { e.state = "patrol"; e.wp = null; }
+        else if (distToPlayer <= E.attackRange) { e.state = "attack"; e.telegraph = 0; }
+      } else if (e.state === "attack") {
+        faceTo(e, _camPos);
+        if (distToPlayer > E.attackRange * 1.3) { e.state = "chase"; e.telegraph = 0; }
+        else if (e.attackCd > 0) {
+          e.attackCd -= dt;
+        } else if (e.telegraph <= 0) {
+          e.telegraph = E.attackWindup;        // begin wind-up
+        } else {
+          e.telegraph -= dt;
+          e.arms.armR.rotation.x = -1.6 * (1 - e.telegraph / E.attackWindup); // raise arm
+          if (e.telegraph <= 0) {
+            e.arms.armR.rotation.x = 0.6;       // swing down
+            if (distToPlayer <= E.attackRange * 1.15) damagePlayer(E.attackDamage, { blockable: true });
+            e.attackCd = E.attackCooldown;
+          }
+        }
+      }
+
+      // --- walk animation (leg/arm swing) while moving ---
+      if (e.state !== "attack") {
+        e.anim += dt * (e.state === "chase" ? 10 : 5);
+        const sw = Math.sin(e.anim) * 0.5;
+        e.mesh.children[4].rotation.x = sw;   // legL
+        e.mesh.children[5].rotation.x = -sw;  // legR
+        e.arms.armR.rotation.x = -sw * 0.5;
+      }
+
+      // --- billboard the health bar above the head ---
+      const hb = e.healthBar;
+      hb.group.position.set(e.mesh.position.x, e.mesh.position.y + 2.15, e.mesh.position.z);
+      hb.group.quaternion.copy(camera.quaternion);
+      hb.fill.scale.x = Math.max(0.001, e.hp / e.maxHp);
+      hb.fill.position.x = -(1 - e.hp / e.maxHp) * 0.53; // keep left-anchored
+
+      // --- quest marker: visible + bobbing only while this quest is tracked ---
+      const tracked = e.questId === GameState.trackedQuestId;
+      e.marker.visible = tracked;
+      if (tracked) {
+        e.marker.position.set(e.mesh.position.x, e.mesh.position.y + 2.8 + Math.sin(e.anim * 0.5) * 0.15, e.mesh.position.z);
+        e.marker.rotation.y += dt * 2;
+      }
+    }
+  }
+
+  function nameOf(e) {
+    const q = GameState.quests.find((qq) => qq.id === e.questId);
+    return q ? q.targetName : "A bandit";
+  }
+
+  const _mv = new THREE.Vector3();
+  function moveToward(e, target, speed, dt) {
+    _mv.copy(target).sub(e.mesh.position); _mv.y = 0;
+    const d = _mv.length();
+    if (d > 0.05) {
+      _mv.normalize();
+      e.mesh.position.x += _mv.x * speed * dt;
+      e.mesh.position.z += _mv.z * speed * dt;
+    }
+    e.mesh.position.y = heightAt(e.mesh.position.x, e.mesh.position.z); // hug terrain
+    if (speed > 0 && d > 0.5) faceTo(e, target);
+  }
+
+  function faceTo(e, target) { e.mesh.lookAt(target.x, e.mesh.position.y, target.z); }
+
+  function damageBandit(e, amount, crit) {
+    if (e.dead) return;
+    e.hp -= amount;
+    e.hitFlash = 0.15;
+    if (e.state === "patrol") { e.state = "chase"; } // struck → aggro
+    spawnDamageNumber(e.pos, Math.round(amount), crit, false);
+    if (e.hp <= 0) killBandit(e);
+  }
+
+  function killBandit(e) {
+    e.dead = true; e.hp = 0; e.corpseT = 0;
+    e.mesh.children.forEach((c) => c.material && c.material.emissive && c.material.emissive.setRGB(0, 0, 0));
+    onBanditKilled(e.questId);
+  }
+
+  /** Advances the matching quest's kill objective and flags completion. */
+  function onBanditKilled(questId) {
+    const q = GameState.quests.find((qq) => qq.id === questId);
+    if (!q || q.state !== "active") return;
+    q.progress = Math.min(q.required, q.progress + 1);
+    if (q.progress >= q.required) {
+      q.state = "complete";
+      toast("Objective Complete", `Return to ${q.giver} for your reward`);
+    }
+    if (GameState.ui.journalOpen) renderJournal();
+  }
+
+  /* ====================================================================== *
+   *  5l. MILESTONE 3 — DIALOGUE UI                                          *
+   * ====================================================================== */
+  const dialogueEl = document.getElementById("dialogue");
+  const dChoices = document.getElementById("d-choices");
+
+  function openDialogue() {
+    const npc = GameState.entities.npc;
+    if (!npc) return;
+    GameState.ui.dialogueOpen = true;
+    dialogueEl.classList.add("open");
+    if (controls.isLocked) controls.unlock();
+    interactEl.classList.remove("show");
+    renderDialogue();
+  }
+
+  function closeDialogue() {
+    GameState.ui.dialogueOpen = false;
+    dialogueEl.classList.remove("open");
+    if (!GameState.ui.pointerLocked && !menusOpen()) playPrompt.classList.remove("hidden");
+  }
+
+  // A radiant offer is generated lazily and held until accepted/declined.
+  let _pendingOffer = null;
+
+  function renderDialogue() {
+    const npc = GameState.entities.npc;
+    document.getElementById("d-name").textContent = npc.name;
+    document.getElementById("d-role").textContent = npc.role;
+    const textEl = document.getElementById("d-text");
+    const rewardEl = document.getElementById("d-reward");
+    dChoices.innerHTML = ""; rewardEl.innerHTML = "";
+
+    const bounty = activeBounty();
+
+    if (bounty && bounty.state === "complete") {
+      textEl.textContent = `You cut ${bounty.targetName} down? Ha! The roads are safer for it. Here — you've earned this.`;
+      rewardEl.innerHTML = `Reward: <b>${bounty.rewardGold} gold</b> &amp; <b>${bounty.rewardItem.name}</b>`;
+      addChoice("Collect reward", () => { turnInQuest(bounty); renderDialogue(); }, true);
+      addChoice("Leave", closeDialogue);
+    } else if (bounty && bounty.state === "active") {
+      textEl.textContent = `${bounty.targetName} still breathes, out to the ${bounty.dir}. Come back when the deed is done.`;
+      addChoice("Track this bounty", () => { GameState.trackedQuestId = bounty.id; toast("Tracking", bounty.title); }, true);
+      addChoice("Leave", closeDialogue);
+    } else {
+      if (!_pendingOffer) _pendingOffer = generateBanditQuest();
+      const o = _pendingOffer;
+      textEl.textContent = `Well met, traveler. A bandit named ${o.targetName} has been raiding to the ${o.dir}. Put them in the dirt and I'll see you paid.`;
+      rewardEl.innerHTML = `Reward: <b>${o.rewardGold} gold</b> &amp; <b>${o.rewardItem.name}</b>`;
+      addChoice("Accept the bounty", () => { acceptQuest(o); _pendingOffer = null; renderDialogue(); }, true);
+      addChoice("Not now", () => { _pendingOffer = null; closeDialogue(); });
+    }
+  }
+
+  function addChoice(label, fn, primary) {
+    const b = document.createElement("button");
+    b.className = "choice" + (primary ? " primary" : "");
+    b.textContent = label;
+    b.addEventListener("click", fn);
+    dChoices.appendChild(b);
+  }
+
+  /* ====================================================================== *
+   *  5m. MILESTONE 3 — JOURNAL UI + HUD TRACKER + TOASTS                    *
+   * ====================================================================== */
+  const journalEl = document.getElementById("journal");
+  const jBody = document.getElementById("j-body");
+
+  function toggleJournal() {
+    const open = !GameState.ui.journalOpen;
+    GameState.ui.journalOpen = open;
+    journalEl.classList.toggle("open", open);
+    if (open) {
+      if (controls.isLocked) controls.unlock();
+      renderJournal();
+    } else if (!GameState.ui.pointerLocked && !menusOpen()) {
+      playPrompt.classList.remove("hidden");
+    }
+  }
+
+  function renderJournal() {
+    const active = GameState.quests.filter((q) => q.state === "active" || q.state === "complete");
+    const done = GameState.quests.filter((q) => q.state === "turnedin");
+    jBody.innerHTML = "";
+
+    if (!active.length && !done.length) {
+      jBody.innerHTML = `<div class="j-empty">No quests yet. Seek out Sigrid on the plain (she stands near where you woke).</div>`;
+      return;
+    }
+    active.forEach((q) => jBody.appendChild(questCard(q)));
+    if (done.length) {
+      const h = document.createElement("div");
+      h.style.cssText = "margin:1rem 0 0.5rem;font-size:0.75rem;letter-spacing:0.15rem;opacity:0.5;text-transform:uppercase";
+      h.textContent = "Completed";
+      jBody.appendChild(h);
+      done.forEach((q) => jBody.appendChild(questCard(q)));
+    }
+  }
+
+  function questCard(q) {
+    const el = document.createElement("div");
+    const tracked = q.id === GameState.trackedQuestId;
+    el.className = "quest-card" + (tracked ? " tracked" : "") + (q.state === "turnedin" ? " done" : "");
+    const status = q.state === "complete" ? "Ready to turn in"
+      : q.state === "turnedin" ? "Completed" : "In progress";
+    const objDone = q.progress >= q.required;
+    el.innerHTML =
+      `<h3>${q.title}</h3><div class="q-status">${status}</div>` +
+      `<div class="q-desc">Hunt down and slay <b>${q.targetName}</b>, last seen to the ${q.dir}.</div>` +
+      `<div class="q-obj-row ${objDone ? "done" : ""}">${objDone ? "✓" : "•"} Slay ${q.targetName} (${q.progress}/${q.required})</div>` +
+      `<div class="q-reward">Reward: <b>${q.rewardGold} gold</b> · <b>${q.rewardItem.name}</b></div>`;
+    if (q.state !== "turnedin") {
+      const btn = document.createElement("button");
+      btn.className = "q-track-btn";
+      btn.textContent = tracked ? "Tracking ✓" : "Track quest";
+      btn.addEventListener("click", () => { GameState.trackedQuestId = q.id; renderJournal(); });
+      el.appendChild(btn);
+    }
+    return el;
+  }
+
+  const trackerEl = document.getElementById("tracker");
+  const tkTitle = document.getElementById("tk-title");
+  const tkObj = document.getElementById("tk-obj");
+  const tkDist = document.getElementById("tk-dist");
+
+  function updateTrackerHUD() {
+    const q = GameState.quests.find((qq) => qq.id === GameState.trackedQuestId);
+    if (!q || q.state === "turnedin") { trackerEl.classList.remove("show"); return; }
+    trackerEl.classList.add("show");
+    tkTitle.textContent = q.title;
+    const done = q.progress >= q.required;
+    tkObj.textContent = done ? `Return to ${q.giver}` : `Slay ${q.targetName} (${q.progress}/${q.required})`;
+    tkObj.className = "q-obj" + (done ? " done" : "");
+    // distance to the target (or NPC once the deed is done)
+    const target = done ? (GameState.entities.npc && GameState.entities.npc.pos) : q.location;
+    if (target) {
+      controls.getObject().getWorldPosition(_camPos);
+      tkDist.textContent = `${_camPos.distanceTo(target).toFixed(0)} m`;
+    } else tkDist.textContent = "";
+  }
+
+  const toastsEl = document.getElementById("toasts");
+  function toast(head, msg) {
+    const el = document.createElement("div");
+    el.className = "toast";
+    el.innerHTML = `<div class="t-head">${head}</div><div>${msg}</div>`;
+    toastsEl.appendChild(el);
+    setTimeout(() => {
+      el.style.transition = "opacity 0.4s"; el.style.opacity = "0";
+      setTimeout(() => el.remove(), 400);
+    }, 2600);
+  }
+
+  /** True if ANY blocking menu overlay is open (gates gameplay + input). */
+  function menusOpen() {
+    return GameState.ui.inventoryOpen || GameState.ui.journalOpen || GameState.ui.dialogueOpen;
+  }
+
+  /* ====================================================================== *
    *  6. INVENTORY UI (placeholder) — renders from GameState                 *
    * ====================================================================== */
   const invEl = document.getElementById("inventory");
@@ -1423,7 +2097,7 @@
     if (open) {
       if (controls.isLocked) controls.unlock(); // free the cursor for the menu
       renderInventory();
-    } else if (!GameState.ui.pointerLocked) {
+    } else if (!GameState.ui.pointerLocked && !menusOpen()) {
       // returning to the world — re-show the play prompt so the user re-locks
       playPrompt.classList.remove("hidden");
     }
@@ -1528,17 +2202,22 @@
     // Clamp dt so an alt-tab / GC hitch can't hurl the player through terrain.
     const dt = Math.min(clock.getDelta(), 0.05);
 
-    if (!GameState.ui.inventoryOpen && controls.isLocked) {
+    if (!menusOpen() && controls.isLocked) {
       updatePlayer(dt);
-      updateStats(dt);      // regen + sprint drain (Milestone 2)
-      updateCombat(dt);     // swing timing + hit detection
-      updateDummies(dt);    // hit-flash, respawn, sparring metronome
-      updateProjectiles(dt);// fireballs in flight
-      updateEffects(dt);    // explosion VFX
-      updateViewmodel(dt);  // sword/hand animation
+      updateStats(dt);          // regen + sprint drain (Milestone 2)
+      updateCombat(dt);         // swing timing + hit detection
+      updateDummies(dt);        // hit-flash, respawn, sparring metronome
+      updateProjectiles(dt);    // fireballs in flight
+      updateEffects(dt);        // explosion VFX
+      updateViewmodel(dt);      // sword/hand animation
+      updateNPCInteraction(dt); // "[E] Talk" prompt + facing (Milestone 3)
+      updateEnemies(dt);        // bandit patrol/chase/attack AI (Milestone 3)
+    } else {
+      interactEl.classList.remove("show");
     }
     updateHUD(dt);
     updateVitalsHUD();
+    updateTrackerHUD();          // quest tracker (Milestone 3)
     renderer.render(scene, camera);
   }
 
@@ -1563,7 +2242,7 @@
       playPrompt.classList.remove("hidden");
 
       loop();
-      console.info("[Dragonreach] Milestone 2 ready. Click to play.");
+      console.info("[Dragonreach] Milestone 3 ready. Click to play.");
 
       // Optional debug handle (opt-in via ?debug=1) — lets automated tests and
       // tinkerers drive systems deterministically without pointer lock.
@@ -1571,12 +2250,15 @@
         window.DR = {
           GameState, CONFIG,
           startAttack, castFireball, damagePlayer,
+          // Milestone 3 hooks
+          generateBanditQuest, acceptQuest, turnInQuest, damageBandit,
           /** Current camera (eye) world position — the origin for hit tests. */
           camPos() { const v = new THREE.Vector3(); controls.getObject().getWorldPosition(v); return { x: v.x, y: v.y, z: v.z }; },
-          /** Advance the Milestone 2 simulation by dt seconds (no input/render). */
+          /** Advance the full Milestone 2 + 3 simulation by dt seconds (no input/render). */
           sim(dt) {
             updateStats(dt); updateCombat(dt); updateDummies(dt);
             updateProjectiles(dt); updateEffects(dt); updateViewmodel(dt);
+            updateNPCInteraction(dt); updateEnemies(dt);
           },
         };
         console.info("[Dragonreach] debug handle exposed as window.DR");

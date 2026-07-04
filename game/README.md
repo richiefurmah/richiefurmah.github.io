@@ -3,6 +3,19 @@
 A high-fantasy, first-person open-world action RPG built with HTML5 + Three.js (WebGL).
 Lives under `/game/` so it is fully isolated from the rest of the site.
 
+## Preview
+
+| The open world | The Dragon boss |
+| --- | --- |
+| ![World](screenshots/01-world.png) | ![Dragon](screenshots/02-dragon.png) |
+
+| NPC dialogue | Quest journal | Inventory |
+| --- | --- | --- |
+| ![Dialogue](screenshots/03-dialogue.png) | ![Journal](screenshots/04-journal.png) | ![Inventory](screenshots/05-inventory.png) |
+
+**Play it live:** once this branch is merged to the default branch, GitHub Pages serves it at
+`https://<your-domain>/game/`. To try this branch before merging, run it locally (below).
+
 ## Milestone 1 — Foundation & Player ✅
 - Decoupled camera + first-person controller (yaw/pitch rig, gravity, jump, sprint)
 - Procedurally generated mountainous open-plain world (seeded value-noise heightfield)
@@ -33,7 +46,19 @@ Lives under `/game/` so it is fully isolated from the rest of the site.
   the objective, and turning in pays **gold + item straight into the Milestone 1 inventory**
 - Toast notifications for quest events
 
+## Milestone 4 — The Dragon & Persistence ✅
+- **The Dragon** (`Vethmirax the Ashen`): a procedural aerial boss with a
+  `circle → dive → firebreath → climb` flight AI, flapping wings, a boss health
+  bar, and a fire-cone breath attack that damages the player. Offered by Sigrid
+  as *"Hunt the Dragon"*; killable with fireballs (and melee when it swoops low)
+- **Persistence** (the vision's *persistent inventories*): `localStorage`
+  save/load of inventory, quest log, and player state — autosaves on quest
+  events, every 20 s, and on exit; restores on boot and **re-spawns active-quest
+  targets** so the world matches. Fully `try/catch`-guarded so a bad save can
+  never brick the boot
+
 Vendored Three.js locally under `vendor/` so the game has **no runtime CDN dependency**.
+Progress is saved under the `localStorage` key `dragonreach_save_v4` — clear it to start fresh.
 
 ### Debug handle
 Append `?debug=1` to the URL to expose `window.DR` (`GameState`, `CONFIG`, `startAttack`,

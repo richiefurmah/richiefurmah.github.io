@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Dragonreach — Milestone 2: Combat &amp; Magic</title>
+<title>Dragonreach — Milestone 4: The Dragon &amp; Persistence</title>
 
 <!--
   ============================================================================
@@ -21,7 +21,18 @@
     - Procedural training dummies (one spars back) + fall damage so every
       new system is testable before enemy AI arrives in Milestone 3
 
-  TECH STACK: HTML5 + CSS3 + JavaScript, Three.js (WebGL) via CDN import map.
+  MILESTONE 3: World, NPCs and Quests
+    - Interactive quest-giver NPC handing out a radiant "Kill the Bandit" quest
+    - Quest journal + HUD tracker + in-world beacon; rewards paid to inventory
+    - Bandit enemy AI: patrol -> chase -> attack (telegraphed, blockable)
+
+  MILESTONE 4: The Dragon and Persistence
+    - Procedural aerial dragon boss (circle -> dive -> firebreath -> climb AI)
+      with a boss health bar, offered as a quest by the NPC
+    - localStorage save/load of inventory, quests, and player state (the
+      "persistent inventories" pillar): autosave + safe-guarded boot
+
+  TECH STACK: HTML5 + CSS3 + JavaScript, Three.js (WebGL), vendored locally.
 
   ARCHITECTURE NOTE ON "SERVER-AUTHORITATIVE" LOGIC:
     GitHub Pages is static hosting; there is no backend to run authoritative
@@ -243,6 +254,35 @@
   #tracker .q-obj.done { color: #7bc148; }
   #tracker .q-dist { font-size: 0.74rem; opacity: 0.7; margin-top: 2px; font-variant-numeric: tabular-nums; }
 
+  /* Boss health bar (the Dragon) */
+  #boss {
+    position: absolute; top: 42px; left: 50%; transform: translateX(-50%);
+    width: min(520px, 70vw); text-align: center; display: none;
+  }
+  #boss.show { display: block; }
+  #boss .b-name {
+    color: #e7c05a; font-size: 0.95rem; letter-spacing: 0.28rem; text-transform: uppercase;
+    text-shadow: 0 2px 6px #000; margin-bottom: 5px;
+  }
+  #boss .b-bar {
+    height: 15px; border-radius: 8px; background: rgba(0,0,0,0.6);
+    border: 1px solid #5a3a1a; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.6);
+  }
+  #boss .b-fill {
+    height: 100%; transform-origin: left center; transform: scaleX(1);
+    background: linear-gradient(90deg, #7a1f1f, #e0662b, #d1453b);
+    transition: transform 0.15s linear;
+  }
+
+  /* "Game saved" indicator */
+  #saved {
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%) translateY(8px);
+    font-size: 0.72rem; letter-spacing: 0.12rem; text-transform: uppercase;
+    color: var(--accent); text-shadow: var(--hud-shadow); opacity: 0;
+    transition: opacity 0.3s, transform 0.3s; pointer-events: none;
+  }
+  #saved.show { opacity: 0.85; transform: translateX(-50%) translateY(0); }
+
   #toasts {
     position: absolute; top: 20%; left: 50%; transform: translateX(-50%);
     display: flex; flex-direction: column; gap: 8px; align-items: center;
@@ -437,6 +477,11 @@
       <div class="q-obj" id="tk-obj"></div>
       <div class="q-dist" id="tk-dist"></div>
     </div>
+    <div id="boss">
+      <div class="b-name" id="boss-name">Dragon</div>
+      <div class="b-bar"><div class="b-fill" id="boss-fill"></div></div>
+    </div>
+    <div id="saved">✓ Game Saved</div>
     <div id="toasts"></div>
     <div id="hint">
       <kbd>LMB</kbd> Light &nbsp; <kbd>Hold LMB</kbd> Heavy &nbsp; <kbd>RMB</kbd> Block<br />
@@ -482,7 +527,7 @@
         <div id="inv-grid"></div>
         <div id="inv-detail"><div class="empty">Select an item</div></div>
       </div>
-      <footer>Press <kbd>I</kbd> or <kbd>Esc</kbd> to close · Milestone 1 placeholder — equipping arrives in Milestone 2</footer>
+      <footer>Press <kbd>I</kbd> or <kbd>Esc</kbd> to close · Quest rewards land here automatically</footer>
     </div>
   </div>
 
@@ -611,6 +656,17 @@
       attackDamage: 14,
       patrolRadius: 10,                  // wander radius around spawn
     },
+
+    // --- Milestone 4: the Dragon (aerial boss) ---
+    dragon: {
+      maxHealth: 420, rewardGold: 500,
+      circleRadius: 34, circleHeight: 27, circleSpeed: 0.42, // orbit rad/s
+      diveSpeed: 20, climbSpeed: 13, engageHeight: 9,        // altitude of a strafing pass
+      breathRange: 28, breathConeCos: 0.55,                  // fire cone: range + half-angle
+      breathDamage: 22, breathDuration: 1.6, breathCooldown: 3.2,
+      passDuration: 3.5,      // how long a dive/strafe lasts before climbing
+      wingFlapSpeed: 3.2,
+    },
   });
 
   /* ====================================================================== *
@@ -642,7 +698,7 @@
 
     // --- Milestone 2: dynamic entities (dummies, projectiles, VFX) ---
     // --- Milestone 3 adds enemies (bandits) + the quest-giver NPC ---
-    entities: { dummies: [], projectiles: [], effects: [], enemies: [], npc: null },
+    entities: { dummies: [], projectiles: [], effects: [], enemies: [], breath: [], npc: null, dragon: null },
 
     // --- Milestone 3: quest log (authoritative) ---
     quests: [],          // array of quest objects
@@ -1323,6 +1379,13 @@
       };
       for (const d of GameState.entities.dummies) tryHit(d, () => damageDummy(d, A.dmg, crit));
       for (const e of GameState.entities.enemies) tryHit(e, () => damageBandit(e, A.dmg, crit));
+      // the dragon can be struck when it swoops into reach (bonus reach for its bulk)
+      const dr = GameState.entities.dragon;
+      if (dr && !dr.dead) {
+        _d.copy(dr.pos).sub(_camPos); const dist = _d.length();
+        if (dist <= A.reach + 3.5) { _d.y = 0; _d.normalize();
+          if (_fwd.dot(_d) >= CONFIG.combat.swingArcCos) damageDragon(A.dmg, crit); }
+      }
     }
 
     if (A.t >= A.dur) A.active = false;    // swing complete
@@ -1388,6 +1451,10 @@
           if (_pd.copy(e.pos).sub(pos).lengthSq() < 1.4 * 1.4) { detonate = true; break; }
         }
       }
+      if (!detonate) {
+        const dr = GameState.entities.dragon;
+        if (dr && !dr.dead && _pd.copy(dr.pos).sub(pos).lengthSq() < 3.2 * 3.2) detonate = true;
+      }
 
       if (detonate) {
         explode(pos.clone());
@@ -1416,6 +1483,14 @@
       if (dist <= M.fireballRadius) {
         const dmg = M.fireballDamage * (1 - dist / M.fireballRadius);
         if (dmg > 1) damageBandit(e, dmg, true);
+      }
+    }
+    const dr = GameState.entities.dragon;
+    if (dr && !dr.dead) {
+      const dist = _pd.copy(dr.pos).sub(pos).length();
+      if (dist <= M.fireballRadius + 2.5) { // the dragon is a big target
+        const dmg = M.fireballDamage * (1 - dist / (M.fireballRadius + 2.5));
+        if (dmg > 1) damageDragon(dmg, true);
       }
     }
     // self-damage if you fireball your own feet (demonstrates Health intake)
@@ -1697,8 +1772,10 @@
   function acceptQuest(q) {
     GameState.quests.push(q);
     GameState.trackedQuestId = q.id;
-    spawnBanditForQuest(q);
+    if (q.type === "dragon") spawnDragon(q);
+    else spawnBanditForQuest(q);
     toast("Quest Added", q.title);
+    saveGame();
   }
 
   /** Grants gold + item into the Milestone 1 inventory and closes the bounty. */
@@ -1714,6 +1791,7 @@
 
     toast("Reward Received", `${q.rewardGold} gold + ${q.rewardItem.name}`);
     if (GameState.ui.inventoryOpen) renderInventory();
+    saveGame();
   }
 
   /** The active/complete Sigrid bounty, if any (radiant → one at a time). */
@@ -1895,6 +1973,260 @@
       toast("Objective Complete", `Return to ${q.giver} for your reward`);
     }
     if (GameState.ui.journalOpen) renderJournal();
+    saveGame();
+  }
+
+  /* ====================================================================== *
+   *  5k2. MILESTONE 4 — THE DRAGON (procedural aerial boss)                 *
+   * ====================================================================== */
+  const DRAGON_NAME = "Vethmirax the Ashen";
+
+  /** Builds a low-poly dragon: body, neck+head, flapping wings, tail, legs. */
+  function buildDragonMesh() {
+    const g = new THREE.Group();
+    const scale = 2.2; // overall size multiplier (large, menacing)
+    const scaleM = new THREE.MeshStandardMaterial({ color: 0x3a2c33, roughness: 0.8, metalness: 0.1, flatShading: true });
+    const bellyM = new THREE.MeshStandardMaterial({ color: 0x6a5330, roughness: 0.9, flatShading: true });
+    const membrM = new THREE.MeshStandardMaterial({ color: 0x241017, roughness: 0.95, side: THREE.DoubleSide, flatShading: true });
+
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.8, 3.2, 8), scaleM);
+    body.rotation.z = Math.PI / 2; body.position.y = 0;
+    const belly = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.3, 0.7), bellyM); belly.position.set(0, -0.4, 0);
+
+    // neck + head reach forward (+X)
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.45, 1.8, 6), scaleM);
+    neck.rotation.z = Math.PI / 2.6; neck.position.set(1.7, 0.5, 0);
+    const head = new THREE.Group();
+    const skull = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.5), scaleM);
+    const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.18, 0.42), scaleM); jaw.position.set(0.05, -0.32, 0);
+    const hornGeo = new THREE.ConeGeometry(0.09, 0.6, 5);
+    const hornL = new THREE.Mesh(hornGeo, bellyM); hornL.position.set(-0.2, 0.4, 0.18); hornL.rotation.x = 0.4;
+    const hornR = new THREE.Mesh(hornGeo, bellyM); hornR.position.set(-0.2, 0.4, -0.18); hornR.rotation.x = -0.4;
+    head.add(skull, jaw, hornL, hornR); head.position.set(2.6, 0.86, 0);
+
+    // wings — each a group hinged at the shoulder so it can flap
+    function wing(side) {
+      const w = new THREE.Group();
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 2.6), scaleM); arm.position.z = 1.3 * side;
+      const membrane = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 2.6), membrM);
+      membrane.rotation.y = Math.PI / 2; membrane.position.set(-0.2, 0, 1.3 * side);
+      w.add(arm, membrane); w.position.set(0, 0.5, 0.4 * side);
+      return w;
+    }
+    const wingL = wing(1), wingR = wing(-1);
+
+    // tail — tapering segments trailing behind (-X)
+    const tail = new THREE.Group();
+    for (let i = 0; i < 5; i++) {
+      const seg = new THREE.Mesh(new THREE.ConeGeometry(0.4 - i * 0.07, 0.7, 6), scaleM);
+      seg.rotation.z = -Math.PI / 2; seg.position.set(-1.7 - i * 0.6, 0.05 * i, 0);
+      tail.add(seg);
+    }
+    // legs
+    const legGeo = new THREE.BoxGeometry(0.22, 0.9, 0.22);
+    const legFL = new THREE.Mesh(legGeo, scaleM); legFL.position.set(0.7, -0.8, 0.5);
+    const legFR = new THREE.Mesh(legGeo, scaleM); legFR.position.set(0.7, -0.8, -0.5);
+    const legBL = new THREE.Mesh(legGeo, scaleM); legBL.position.set(-0.7, -0.8, 0.55);
+    const legBR = new THREE.Mesh(legGeo, scaleM); legBR.position.set(-0.7, -0.8, -0.55);
+
+    g.add(body, belly, neck, head, wingL, wingR, tail, legFL, legFR, legBL, legBR);
+    g.scale.setScalar(scale);
+    g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    return { group: g, wingL, wingR, head, jaw };
+  }
+
+  function generateDragonQuest() {
+    return {
+      id: ++GameState.questSeq,
+      title: `The Dragon of Dragonreach`,
+      giver: "Sigrid", type: "dragon",
+      targetName: DRAGON_NAME, required: 1, progress: 0,
+      rewardGold: CONFIG.dragon.rewardGold,
+      rewardItem: { id: "sword_dragonbone", name: "Dragonbone Greatsword", glyph: "⚔️", type: "Weapon", weight: 20, desc: "Forged from the bones of Vethmirax. It still smoulders." },
+      state: "active", dir: "the high peaks",
+      location: new THREE.Vector3(0, 0, 0), // dragon roams; tracker points at the live dragon
+    };
+  }
+
+  /** Spawns the dragon in the sky above the player and shows the boss bar. */
+  function spawnDragon(quest) {
+    if (GameState.entities.dragon) return;
+    const m = buildDragonMesh();
+    controls.getObject().getWorldPosition(_camPos);
+    const D = CONFIG.dragon;
+    m.group.position.set(_camPos.x + D.circleRadius, heightAt(_camPos.x, _camPos.z) + D.circleHeight, _camPos.z);
+    scene.add(m.group);
+
+    GameState.entities.dragon = {
+      parts: m, mesh: m.group,
+      pos: new THREE.Vector3().copy(m.group.position),
+      hp: D.maxHealth, maxHp: D.maxHealth,
+      state: "circle", angle: 0, stateT: 0,
+      breathCd: D.breathCooldown, breathT: 0, flap: 0,
+      dead: false, fallVel: 0,
+      questId: quest.id,
+    };
+    bossNameEl.textContent = quest.targetName;
+    bossEl.classList.add("show");
+    toast("A Shadow Falls", `${quest.targetName} descends from the peaks!`);
+  }
+
+  const _dragTarget = new THREE.Vector3();
+  const _dragFwd = new THREE.Vector3();
+  const _toPlayerD = new THREE.Vector3();
+
+  function updateDragon(dt) {
+    const dr = GameState.entities.dragon;
+    if (!dr) return;
+    const D = CONFIG.dragon;
+    controls.getObject().getWorldPosition(_camPos);
+
+    // wing flap always animates
+    dr.flap += dt * D.wingFlapSpeed * (dr.dead ? 0.3 : 1);
+    const flap = Math.sin(dr.flap);
+    dr.parts.wingL.rotation.x = flap * 0.6;
+    dr.parts.wingR.rotation.x = -flap * 0.6;
+
+    if (dr.dead) {
+      // death spiral: fall, spin, and crash onto the terrain
+      dr.fallVel += 18 * dt;
+      dr.mesh.position.y -= dr.fallVel * dt;
+      dr.mesh.rotation.x += dt * 1.2; dr.mesh.rotation.z += dt * 0.8;
+      const ground = heightAt(dr.mesh.position.x, dr.mesh.position.z);
+      if (dr.mesh.position.y <= ground + 1.5) {
+        dr.mesh.position.y = ground + 1.5;
+        bossEl.classList.remove("show");
+      }
+      dr.pos.copy(dr.mesh.position);
+      return;
+    }
+
+    dr.stateT += dt;
+    if (dr.breathCd > 0) dr.breathCd -= dt;
+    const distToPlayer = _toPlayerD.copy(_camPos).sub(dr.mesh.position).length();
+    const groundHere = heightAt(dr.mesh.position.x, dr.mesh.position.z);
+
+    if (dr.state === "circle") {
+      // orbit the player at altitude, looking for an opening to dive
+      dr.angle += D.circleSpeed * dt;
+      _dragTarget.set(
+        _camPos.x + Math.cos(dr.angle) * D.circleRadius,
+        _camPos.y + D.circleHeight,
+        _camPos.z + Math.sin(dr.angle) * D.circleRadius);
+      flyToward(dr, _dragTarget, D.diveSpeed * 0.6, dt);
+      if (dr.breathCd <= 0 && dr.stateT > 2.5) { dr.state = "dive"; dr.stateT = 0; }
+    } else if (dr.state === "dive") {
+      // swoop down toward a point just above the player and open fire when lined up
+      _dragTarget.set(_camPos.x, Math.max(groundHere + D.engageHeight, _camPos.y + 3), _camPos.z);
+      flyToward(dr, _dragTarget, D.diveSpeed, dt);
+      _dragFwd.copy(_camPos).sub(dr.mesh.position).normalize();
+      const facing = _dragFwd.dot(dragonHeading(dr));
+      // breathe once we're in range and roughly lined up (or after a beat, so a
+      // marginal facing angle can never stall the attack)
+      if (distToPlayer < D.breathRange && (facing > 0.4 || dr.stateT > 1.2)) {
+        dr.state = "breath"; dr.stateT = 0; dr.breathT = D.breathDuration;
+      } else if (dr.stateT > D.passDuration) { dr.state = "climb"; dr.stateT = 0; }
+    } else if (dr.state === "breath") {
+      // hover-ish and exhale a cone of fire at the player
+      _dragTarget.set(_camPos.x, groundHere + D.engageHeight, _camPos.z);
+      flyToward(dr, _dragTarget, D.diveSpeed * 0.35, dt);
+      faceDragon(dr, _camPos);
+      dr.breathT -= dt;
+      dr.parts.jaw.rotation.z = 0.5; // open maw
+
+      // emit fire particles from the mouth toward the player
+      emitBreath(dr);
+      // continuous cone damage
+      const mouth = mouthPos(dr);
+      _dragFwd.copy(_camPos).sub(mouth); const dist = _dragFwd.length(); _dragFwd.normalize();
+      const head = dragonHeading(dr);
+      if (dist < D.breathRange && _dragFwd.dot(head) > D.breathConeCos) {
+        damagePlayer(D.breathDamage * dt, { blockable: true }); // guard helps a little
+      }
+      if (dr.breathT <= 0) { dr.state = "climb"; dr.stateT = 0; dr.breathCd = D.breathCooldown; dr.parts.jaw.rotation.z = 0; }
+    } else if (dr.state === "climb") {
+      _dragTarget.set(_camPos.x + Math.cos(dr.angle) * D.circleRadius, _camPos.y + D.circleHeight, _camPos.z + Math.sin(dr.angle) * D.circleRadius);
+      flyToward(dr, _dragTarget, D.climbSpeed, dt);
+      if (dr.mesh.position.y >= _camPos.y + D.circleHeight - 3) { dr.state = "circle"; dr.stateT = 0; }
+    }
+
+    dr.pos.copy(dr.mesh.position);
+    updateBossBar();
+  }
+
+  // --- dragon flight helpers ---
+  const _fly = new THREE.Vector3();
+  function flyToward(dr, target, speed, dt) {
+    _fly.copy(target).sub(dr.mesh.position);
+    const d = _fly.length();
+    if (d > 0.1) { _fly.multiplyScalar(Math.min(1, (speed * dt) / d)); dr.mesh.position.add(_fly); }
+    if (d > 1) faceDragon(dr, target);
+  }
+  function faceDragon(dr, target) {
+    // the dragon's head is along +X, so aim +X at the target
+    const m = new THREE.Matrix4().lookAt(dr.mesh.position, target, UP);
+    dr.mesh.quaternion.setFromRotationMatrix(m);
+    // lookAt aims local -Z at the target; the model's head is +X, so rotate
+    // +90° about Y to bring +X where -Z was (rotateY(+π/2): +X → -Z).
+    dr.mesh.rotateY(Math.PI / 2);
+  }
+  const UP = new THREE.Vector3(0, 1, 0);
+  const _heading = new THREE.Vector3();
+  function dragonHeading(dr) { return _heading.set(1, 0, 0).applyQuaternion(dr.mesh.quaternion).normalize(); }
+  const _mouth = new THREE.Vector3();
+  function mouthPos(dr) { return _mouth.set(3.0 * 2.2, 0.86 * 2.2, 0).applyQuaternion(dr.mesh.quaternion).add(dr.mesh.position); }
+
+  function emitBreath(dr) {
+    const mouth = mouthPos(dr);
+    _dragFwd.copy(_camPos).sub(mouth).normalize();
+    for (let i = 0; i < 2; i++) {
+      const s = 0.3 + Math.abs(Math.sin(dr.flap * 7 + i)) * 0.5;
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(s, 6, 5),
+        new THREE.MeshBasicMaterial({ color: i ? 0xffb347 : 0xff5a1a, transparent: true, opacity: 0.9 }));
+      mesh.position.copy(mouth);
+      const spread = 0.12;
+      const v = _dragFwd.clone().add(new THREE.Vector3((qrand() - 0.5) * spread, (qrand() - 0.5) * spread, (qrand() - 0.5) * spread));
+      GameState.entities.breath.push({ mesh, vel: v.multiplyScalar(24), life: 0.5 + qrand() * 0.3 });
+      scene.add(mesh);
+    }
+  }
+
+  function updateBreath(dt) {
+    const list = GameState.entities.breath;
+    for (let i = list.length - 1; i >= 0; i--) {
+      const b = list[i];
+      b.life -= dt;
+      b.mesh.position.addScaledVector(b.vel, dt);
+      b.mesh.material.opacity = Math.max(0, b.life * 1.6);
+      b.mesh.scale.multiplyScalar(1 + dt * 1.5);
+      if (b.life <= 0) { scene.remove(b.mesh); b.mesh.geometry.dispose(); b.mesh.material.dispose(); list.splice(i, 1); }
+    }
+  }
+
+  function damageDragon(amount, crit) {
+    const dr = GameState.entities.dragon;
+    if (!dr || dr.dead) return;
+    dr.hp -= amount;
+    spawnDamageNumber(dr.pos, Math.round(amount), crit, false);
+    if (dr.hp <= 0) killDragon(dr);
+    else updateBossBar();
+  }
+
+  function killDragon(dr) {
+    dr.dead = true; dr.hp = 0; dr.fallVel = 4;
+    updateBossBar();
+    toast("Dragon Slain!", `${DRAGON_NAME} crashes to the earth`);
+    onBanditKilled(dr.questId); // reuse the kill-objective advance (works for any quest type)
+  }
+
+  const bossEl = document.getElementById("boss");
+  const bossNameEl = document.getElementById("boss-name");
+  const bossFillEl = document.getElementById("boss-fill");
+  function updateBossBar() {
+    const dr = GameState.entities.dragon;
+    if (!dr) { bossEl.classList.remove("show"); return; }
+    bossFillEl.style.transform = `scaleX(${Math.max(0, dr.hp / dr.maxHp)})`;
   }
 
   /* ====================================================================== *
@@ -1944,9 +2276,12 @@
     } else {
       if (!_pendingOffer) _pendingOffer = generateBanditQuest();
       const o = _pendingOffer;
-      textEl.textContent = `Well met, traveler. A bandit named ${o.targetName} has been raiding to the ${o.dir}. Put them in the dirt and I'll see you paid.`;
-      rewardEl.innerHTML = `Reward: <b>${o.rewardGold} gold</b> &amp; <b>${o.rewardItem.name}</b>`;
+      textEl.textContent = `Well met, traveler. A bandit named ${o.targetName} has been raiding to the ${o.dir}. Put them in the dirt and I'll see you paid. ` +
+        `…And if you've a death wish, ${DRAGON_NAME} circles the high peaks. Slay it and you'll be a legend.`;
+      rewardEl.innerHTML = `Bounty: <b>${o.rewardGold} gold</b> &amp; <b>${o.rewardItem.name}</b><br>` +
+        `Dragon: <b>${CONFIG.dragon.rewardGold} gold</b> &amp; <b>Dragonbone Greatsword</b>`;
       addChoice("Accept the bounty", () => { acceptQuest(o); _pendingOffer = null; renderDialogue(); }, true);
+      addChoice("⚔ Hunt the Dragon", () => { acceptQuest(generateDragonQuest()); _pendingOffer = null; renderDialogue(); }, true);
       addChoice("Not now", () => { _pendingOffer = null; closeDialogue(); });
     }
   }
@@ -2031,8 +2366,11 @@
     const done = q.progress >= q.required;
     tkObj.textContent = done ? `Return to ${q.giver}` : `Slay ${q.targetName} (${q.progress}/${q.required})`;
     tkObj.className = "q-obj" + (done ? " done" : "");
-    // distance to the target (or NPC once the deed is done)
-    const target = done ? (GameState.entities.npc && GameState.entities.npc.pos) : q.location;
+    // distance to the target (or NPC once the deed is done); the dragon roams,
+    // so track its live position rather than a fixed spot.
+    let liveTarget = q.location;
+    if (q.type === "dragon" && GameState.entities.dragon && !GameState.entities.dragon.dead) liveTarget = GameState.entities.dragon.pos;
+    const target = done ? (GameState.entities.npc && GameState.entities.npc.pos) : liveTarget;
     if (target) {
       controls.getObject().getWorldPosition(_camPos);
       tkDist.textContent = `${_camPos.distanceTo(target).toFixed(0)} m`;
@@ -2054,6 +2392,87 @@
   /** True if ANY blocking menu overlay is open (gates gameplay + input). */
   function menusOpen() {
     return GameState.ui.inventoryOpen || GameState.ui.journalOpen || GameState.ui.dialogueOpen;
+  }
+
+  /* ====================================================================== *
+   *  5n. MILESTONE 4 — PERSISTENCE (localStorage save / load)               *
+   *      Satisfies the "persistent inventories" pillar. Everything is       *
+   *      wrapped in try/catch so a corrupt or stale save can never brick     *
+   *      the boot sequence — a bad save is simply ignored.                   *
+   * ====================================================================== */
+  const SAVE_KEY = "dragonreach_save_v4";
+  const savedEl = document.getElementById("saved");
+  let _savedTimer = null;
+
+  function saveGame() {
+    try {
+      const P = GameState.player;
+      const data = {
+        v: 4,
+        inventory: GameState.inventory.items,
+        quests: GameState.quests.map((q) => ({
+          ...q, rewardItem: q.rewardItem,
+          location: { x: q.location.x, y: q.location.y, z: q.location.z },
+        })),
+        trackedQuestId: GameState.trackedQuestId,
+        questSeq: GameState.questSeq,
+        player: {
+          health: P.health, stamina: P.stamina, magicka: P.magicka,
+          position: { x: P.position.x, y: P.position.y, z: P.position.z },
+        },
+      };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+      flashSaved();
+    } catch (err) {
+      console.warn("[Dragonreach] save failed:", err.message);
+    }
+  }
+
+  /** Restores a prior session. Returns true if a valid save was applied. */
+  function loadGame() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return false;
+      const d = JSON.parse(raw);
+      if (!d || d.v !== 4) return false;
+
+      // inventory
+      if (Array.isArray(d.inventory)) GameState.inventory.items = d.inventory;
+
+      // quests (rebuild Vector3 locations)
+      GameState.quests = (d.quests || []).map((q) => ({
+        ...q, location: new THREE.Vector3(q.location?.x || 0, q.location?.y || 0, q.location?.z || 0),
+      }));
+      GameState.trackedQuestId = d.trackedQuestId ?? null;
+      GameState.questSeq = d.questSeq || GameState.quests.length;
+
+      // player vitals + position
+      const P = GameState.player;
+      if (d.player) {
+        P.health = d.player.health ?? P.health;
+        P.stamina = d.player.stamina ?? P.stamina;
+        P.magicka = d.player.magicka ?? P.magicka;
+        if (d.player.position) P.position.set(d.player.position.x, d.player.position.y, d.player.position.z);
+      }
+
+      // re-spawn live targets for any still-active quest so the world matches
+      for (const q of GameState.quests) {
+        if (q.state !== "active") continue;
+        if (q.type === "dragon") spawnDragon(q);
+        else if (q.type === "kill") spawnBanditForQuest(q);
+      }
+      console.info("[Dragonreach] save loaded:", GameState.quests.length, "quests,", GameState.inventory.items.length, "items");
+      return true;
+    } catch (err) {
+      console.warn("[Dragonreach] load failed (ignoring save):", err.message);
+      return false;
+    }
+  }
+
+  function flashSaved() {
+    savedEl.classList.add("show");
+    clearTimeout(_savedTimer);
+    _savedTimer = setTimeout(() => savedEl.classList.remove("show"), 1400);
   }
 
   /* ====================================================================== *
@@ -2212,6 +2631,8 @@
       updateViewmodel(dt);      // sword/hand animation
       updateNPCInteraction(dt); // "[E] Talk" prompt + facing (Milestone 3)
       updateEnemies(dt);        // bandit patrol/chase/attack AI (Milestone 3)
+      updateDragon(dt);         // aerial boss AI + firebreath (Milestone 4)
+      updateBreath(dt);         // dragon fire particles (Milestone 4)
     } else {
       interactEl.classList.remove("show");
     }
@@ -2231,18 +2652,27 @@
       // Spawn the player on the ground at the configured plain location.
       const P = GameState.player;
       P.position.y = heightAt(P.position.x, P.position.z) + CONFIG.player.eyeHeight;
+
+      // Milestone 4: restore a prior session if one exists (inventory, quests,
+      // vitals, position; re-spawns active quest targets). Safe-guarded.
+      const loaded = loadGame();
+      if (loaded) toast("Welcome Back", "Your journey continues");
       controls.getObject().position.copy(P.position);
 
       bindInput();
       bindPointerLock();
       bindResize();
 
+      // Autosave: periodically and on exit, so progress is never lost.
+      setInterval(saveGame, 20000);
+      window.addEventListener("beforeunload", saveGame);
+
       // Reveal the world; show the "click to play" prompt.
       boot.classList.add("hidden");
       playPrompt.classList.remove("hidden");
 
       loop();
-      console.info("[Dragonreach] Milestone 3 ready. Click to play.");
+      console.info("[Dragonreach] Milestone 4 ready. Click to play.");
 
       // Optional debug handle (opt-in via ?debug=1) — lets automated tests and
       // tinkerers drive systems deterministically without pointer lock.
@@ -2252,13 +2682,20 @@
           startAttack, castFireball, damagePlayer,
           // Milestone 3 hooks
           generateBanditQuest, acceptQuest, turnInQuest, damageBandit,
+          // Milestone 4 hooks
+          generateDragonQuest, spawnDragon, damageDragon, saveGame, loadGame,
+          get dragon() { return GameState.entities.dragon; },
+          openDialogue, toggleJournal, // UI helpers (for previews/tests)
+          /** Point the camera at a world position (for preview screenshots). */
+          lookAt(x, y, z) { camera.lookAt(x, y, z); },
           /** Current camera (eye) world position — the origin for hit tests. */
           camPos() { const v = new THREE.Vector3(); controls.getObject().getWorldPosition(v); return { x: v.x, y: v.y, z: v.z }; },
-          /** Advance the full Milestone 2 + 3 simulation by dt seconds (no input/render). */
+          /** Advance the full Milestone 2 + 3 + 4 simulation by dt seconds (no input/render). */
           sim(dt) {
             updateStats(dt); updateCombat(dt); updateDummies(dt);
             updateProjectiles(dt); updateEffects(dt); updateViewmodel(dt);
             updateNPCInteraction(dt); updateEnemies(dt);
+            updateDragon(dt); updateBreath(dt);
           },
         };
         console.info("[Dragonreach] debug handle exposed as window.DR");
